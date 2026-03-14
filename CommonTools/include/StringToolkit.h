@@ -5,6 +5,7 @@
 #include <include/cstring.h>
 
 #include <string>
+#include <omp.h>
 
 /** @addtogroup Toolkit
  * @{

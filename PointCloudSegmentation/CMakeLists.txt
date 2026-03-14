@@ -1,31 +1,33 @@
 set(SOURCES "")
+file(GLOB_RECURSE SOURCES "src/*.h" "src/*.cpp" "src/*.c")
 
-aux_source_directory(include INC_SRC)
-aux_source_directory(cstring STRING_SRC)
-aux_source_directory(Data DATA_SRC)
-aux_source_directory(Tool STRING_SRC)
+add_library(PointCloudSegmentation ${SOURCES})
+apply_compiler_config(PointCloudSegmentation)
 
-list(APPEND SOURCES ${INC_SRC} 
-					${STRING_SRC} 
-                    ${DATA_SRC} 
-                    ${STRING_SRC})
-
-add_library(CommonTools ${SOURCES})
-apply_compiler_config(CommonTools)
 
 # 头文件引用
-target_include_directories(CommonTools PUBLIC 
+target_include_directories(PointCloudSegmentation PUBLIC 
 	${CMAKE_CURRENT_SOURCE_DIR}
-	${OSG_INCLUDE_DIR}
+	CommonTools
+	${Eigen3_INCLUDE_DIR}
+	${OSG_INCLUDE_DIR} 
+	${PCL_INCLUDE_DIR} 
+	${VCG_INCLUDE_DIR}
+	${Ceres_INCLUDE_DIR} 
 )
 
 # 依赖库引用
-target_link_libraries(CommonTools PUBLIC 
-	${OSG_LIBS}
+target_link_libraries(PointCloudSegmentation PUBLIC 
+	CommonTools 
 	OpenMP::OpenMP_CXX 
+	${PCL_LIBS} 
+	${CGAL_LIBS} 
+	${Ceres_LIBRARY} 
 )
 
-set_target_properties(CommonTools PROPERTIES
+
+
+set_target_properties(PointCloudSegmentation PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 	LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 	ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib

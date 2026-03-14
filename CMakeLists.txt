@@ -26,15 +26,23 @@ include(${PROJECT_SOURCE_DIR}/cmake/config.cmake)
 # 引用第三方库配置
 include(${PROJECT_SOURCE_DIR}/../ThirdPart/toolchain.cmake)
 
+
+find_package(OpenMP REQUIRED)
+
+
 # 头文件搜索路径
-include_directories(${PROJECT_SOURCE_DIR}/CommonTools)
+# include_directories(${PROJECT_SOURCE_DIR}/CommonTools)
+# include_directories(${PROJECT_SOURCE_DIR}/PointCloudSegmentation)
 
-set(DEPENDENCY_LIBS "")
 
-include_directories(${OSG_INCLUDE_DIR})
-list(APPEND DEPENDENCY_LIBS ${OSG_LIBS})
+# set(DEPENDENCY_LIBS "")
+
+# include_directories(${OSG_INCLUDE_DIR})
+# list(APPEND DEPENDENCY_LIBS ${OSG_LIBS})
+
 
 add_subdirectory(CommonTools)
+add_subdirectory(PointCloudSegmentation)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
