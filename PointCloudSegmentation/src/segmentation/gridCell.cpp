@@ -1,29 +1,25 @@
-//stdafx.h
-#include "gridCell.h"
+#include <src/segmentation/gridCell.h>
+#include <src/core/pointTypes.hpp>
+#include <src/core/private/statistics.h>
+#include <src/algorithm/math.h>
+#include <src/utils/logging.h>
+#include <src/utils/stringutil.h>
+#include <include/ClassificationDef.h>
 
 #include <mutex>
 #include <set>
 
-#include "../core/pointTypes.hpp"
-#include "../core/private/statistics.h"
-#include "../algorithm/math.h"
-#include "../utils/logging.h"
-#include "../utils/stringutil.h"
-#include <ClassificationDef.h>
-
 namespace d3s {
 	namespace pcs {
 		osg::Vec2i NEIGHBORS_8[8] = { { -1, -1 }, { 0, -1 }, { 1, -1 }, { -1, 0 },
-										   { 1, 0 },   { -1, 1 }, { 0, 1 },	 { 1, 1 } };
+									  { 1, 0 },	  { -1, 1 }, { 0, 1 },	{ 1, 1 } };
 
-		// GridCell Íø¸ñµ¥Ôª
+		// GridCell ç½‘æ ¼å•å…ƒ
 		//////////////////////////////////////////////////////////////////////////
-		GridCell::GridCell() :label(eUnclassified), _input(nullptr) {}
+		GridCell::GridCell() : label(eUnclassified), _input(nullptr) {}
 
 		GridCell::GridCell(const osg::Vec3& pmin, const osg::Vec3& pmax)
-			: osg::BoundingBox(pmin, pmax),
-			  label(eUnclassified),
-			  _input(nullptr)
+			: osg::BoundingBox(pmin, pmax), label(eUnclassified), _input(nullptr)
 
 		{
 		}
@@ -41,13 +37,11 @@ namespace d3s {
 		}
 
 		GridCell::GridCell(const GridCell& rhs)
-			: osg::BoundingBox(rhs), label(rhs.label),
-			  _input(rhs._input),
-			  _indices(rhs._indices)
+			: osg::BoundingBox(rhs), label(rhs.label), _input(rhs._input), _indices(rhs._indices)
 		{
 		}
 
-		GridCell& GridCell::operator=(const GridCell& rhs) 
+		GridCell& GridCell::operator=(const GridCell& rhs)
 		{
 			_input = rhs._input;
 			_indices = rhs._indices;
@@ -62,8 +56,8 @@ namespace d3s {
 		void GridCell::AddPoint(int pointIndex) { _indices.push_back(pointIndex); }
 
 		void GridCell::Clear() { _indices.clear(); }
-	
-		// Grid2D 2DÍø¸ñ»®·Ö
+
+		// Grid2D 2Dç½‘æ ¼åˆ’åˆ†
 		//////////////////////////////////////////////////////////////////////////
 		Grid2D::Grid2D() : _nRows(0), _nColumns(0) {}
 
@@ -83,7 +77,10 @@ namespace d3s {
 
 		GridCell& Grid2D::at(int row, int col) { return _cells[row * _nColumns + col]; }
 
-		const GridCell& Grid2D::at(int row, int col) const { return _cells.at(row * _nColumns + col); }
+		const GridCell& Grid2D::at(int row, int col) const
+		{
+			return _cells.at(row * _nColumns + col);
+		}
 
 		GridCell& Grid2D::at(int npos) { return _cells[npos]; }
 
@@ -94,7 +91,7 @@ namespace d3s {
 		const GridCell& Grid2D::operator[](int npos) const { return _cells.at(npos); }
 
 
-		// Grid3D 3DÍø¸ñ»®·Ö
+		// Grid3D 3Dç½‘æ ¼åˆ’åˆ†
 		//////////////////////////////////////////////////////////////////////////
 		Grid3D::Grid3D() : _xSize(0), _ySize(0), _zSize(0) {}
 
@@ -117,9 +114,9 @@ namespace d3s {
 
 		std::shared_ptr<GridCell>& Grid3D::getOrCreate(int xi, int yi, int zi)
 		{
-			return _sparse_cells[{xi, yi, zi}];
+			return _sparse_cells[{ xi, yi, zi }];
 		}
-		
+
 		std::shared_ptr<GridCell> Grid3D::get(int xi, int yi, int zi) const
 		{
 			Index index = { xi, yi, zi };
@@ -143,12 +140,13 @@ namespace d3s {
 		{
 			if (visitor)
 			{
-				for (auto it = _sparse_cells.begin(); it != _sparse_cells.end(); ++it) 
+				for (auto it = _sparse_cells.begin(); it != _sparse_cells.end(); ++it)
 					visitor(it->second);
 			}
 		}
 
-		void Grid3D::Visit(std::function<void(Index, const std::shared_ptr<GridCell>&)> visitor) const
+		void Grid3D::Visit(
+			std::function<void(Index, const std::shared_ptr<GridCell>&)> visitor) const
 		{
 			if (visitor)
 			{
@@ -165,7 +163,7 @@ namespace d3s {
 							  const std::vector<int>& indices,
 							  Grid2D& grid)
 		{
-			CHECK_MSG(input, "ÎŞĞ§µãÔÆÊı¾İ.");
+			CHECK_MSG(input, "æ— æ•ˆç‚¹äº‘æ•°æ®.");
 
 			double xmin = input->bbox.xMin();
 			double xmax = input->bbox.xMax();
@@ -177,10 +175,10 @@ namespace d3s {
 			int numRow = std::floor((ymax - ymin) / cellsize) + 1;
 			int numColumn = std::floor((xmax - xmin) / cellsize) + 1;
 
-			// Íø¸ñÄÚ´æ·ÖÅä
+			// ç½‘æ ¼å†…å­˜åˆ†é…
 			grid.resize(numColumn, numRow);
 
-			// ³õÊ¼»¯Íø¸ñ
+			// åˆå§‹åŒ–ç½‘æ ¼
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
@@ -211,14 +209,14 @@ namespace d3s {
 				ri = clamp(ri, 0, numRow - 1);
 				ci = clamp(ci, 0, numColumn - 1);
 
-				// ¶ÔÓ¦µ¥Ôª¼ÓËø
+				// å¯¹åº”å•å…ƒåŠ é”
 				int mutexIndex = cellsize < 1.0 ? 0 : ri * numColumn + ci;
 				std::unique_lock<std::mutex> lock(gridMutex[mutexIndex]);
 				GridCell& cell = grid.at(ri, ci);
 				cell.AddPoint(indices[i]);
 			}
 
-			PCS_INFO("[ComputeGridCells] ¸ñÍø»®·ÖÍê³É(%lf).", cellsize);
+			PCS_INFO("[ComputeGridCells] æ ¼ç½‘åˆ’åˆ†å®Œæˆ(%lf).", cellsize);
 		}
 
 
@@ -227,7 +225,7 @@ namespace d3s {
 								   const std::vector<int>& indices,
 								   Grid2D& grid)
 		{
-			CHECK_MSG(input, "ÎŞĞ§µãÔÆÊı¾İ.");
+			CHECK_MSG(input, "æ— æ•ˆç‚¹äº‘æ•°æ®.");
 
 			osg::BoundingBox bbox;
 			computeMinMax3D(*input, indices, bbox);
@@ -242,13 +240,13 @@ namespace d3s {
 			int numRow = std::floor((ymax - ymin) / cellsize) + 1;
 			int numColumn = std::floor((xmax - xmin) / cellsize) + 1;
 
-			CHECK_MSG(numColumn > 0, StringPrintf("xmin=%lf, xmax=%lf.", xmin, xmax));
-			CHECK_MSG(numRow > 0, StringPrintf("ymin=%lf, ymax=%lf.", ymax, ymin));
+			CHECK_MSG(numColumn > 0, StringPrintf("xmin=%lf, xmax=%lf.", xmin, xmax).c_str());
+			CHECK_MSG(numRow > 0, StringPrintf("ymin=%lf, ymax=%lf.", ymax, ymin).c_str());
 
-			// Íø¸ñÄÚ´æ·ÖÅä
+			// ç½‘æ ¼å†…å­˜åˆ†é…
 			grid.resize(numColumn, numRow);
 
-			// ³õÊ¼»¯Íø¸ñ
+			// åˆå§‹åŒ–ç½‘æ ¼
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
@@ -280,14 +278,14 @@ namespace d3s {
 				ri = clamp(ri, 0, numRow - 1);
 				ci = clamp(ci, 0, numColumn - 1);
 
-				// ¶ÔÓ¦µ¥Ôª¼ÓËø
+				// å¯¹åº”å•å…ƒåŠ é”
 				int mutexIndex = cellsize < 1.0 ? 0 : ri * numColumn + ci;
 				std::unique_lock<std::mutex> lock(gridMutex[mutexIndex]);
 				GridCell& cell = grid.at(ri, ci);
 				cell.AddPoint(indices[i]);
 			}
 
-			PCS_INFO("[ComputeLocalGridCells] ¸ñÍø»®·ÖÍê³É(%lf).", cellsize);
+			PCS_INFO("[ComputeLocalGridCells] æ ¼ç½‘åˆ’åˆ†å®Œæˆ(%lf).", cellsize);
 		}
 
 
@@ -297,7 +295,7 @@ namespace d3s {
 								   ClassificationType label,
 								   Grid3D& grid)
 		{
-			CHECK_MSG(input, "ÎŞĞ§µãÔÆÊı¾İ.");
+			CHECK_MSG(input, "æ— æ•ˆç‚¹äº‘æ•°æ®.");
 
 			osg::BoundingBox bbox;
 			computeMinMax3D(*input, indices, bbox);
@@ -313,13 +311,13 @@ namespace d3s {
 			int ySize = std::floor((ymax - ymin) / cellsize) + 1;
 			int zSize = std::floor((zmax - zmin) / cellsize) + 1;
 
-			CHECK_MSG(xSize > 0, StringPrintf("xmin=%lf, xmax=%lf.", xmin, xmax));
-			CHECK_MSG(ySize > 0, StringPrintf("ymin=%lf, ymax=%lf.", ymin, ymax));
-			CHECK_MSG(zSize > 0, StringPrintf("zmin=%lf, zmax=%lf.", zmin, zmax));
+			CHECK_MSG(xSize > 0, StringPrintf("xmin=%lf, xmax=%lf.", xmin, xmax).c_str());
+			CHECK_MSG(ySize > 0, StringPrintf("ymin=%lf, ymax=%lf.", ymin, ymax).c_str());
+			CHECK_MSG(zSize > 0, StringPrintf("zmin=%lf, zmax=%lf.", zmin, zmax).c_str());
 
 			grid.resize(xSize, ySize, zSize);
 
-			
+
 			for (int i = 0; i < (int)indices.size(); ++i)
 			{
 				const auto& p = input->points[indices[i]];
@@ -379,10 +377,10 @@ namespace d3s {
 		};*/
 
 		/**
-		 *  @brief    ¸ù¾İÌåËØÍø¸ñ£¬»ñÈ¡Á¬Í¬ÇøÓò
+		 *  @brief    æ ¹æ®ä½“ç´ ç½‘æ ¼ï¼Œè·å–è¿åŒåŒºåŸŸ
 		 *
-		 *  @param    const Grid3D & grid						ÌåËØÍø¸ñ
-		 *  @param    std::vector<std::vector<Grid3D::Index>> & clusters	¾ÛÀà
+		 *  @param    const Grid3D & grid						ä½“ç´ ç½‘æ ¼
+		 *  @param    std::vector<std::vector<Grid3D::Index>> & clusters	èšç±»
 		 *
 		 *  @return   void
 		 */
@@ -394,8 +392,7 @@ namespace d3s {
 			int xSize = grid.getXSize();
 			int ySize = grid.getYSize();
 			int zSize = grid.getZSize();
-			size_t totalSize = xSize * ySize * zSize;
-
+			// size_t totalSize = xSize * ySize * zSize;
 			// PCS_DEBUG("grid size memory: %lf MB", (double)totalSize / 1024.0 / 1024.0);
 
 			CHECK(grid.size() > 0);
@@ -449,7 +446,7 @@ namespace d3s {
 						continue;
 					}
 
-					// ±éÀúÏàÁÚ½Ó½Úµã
+					// éå†ç›¸é‚»æ¥èŠ‚ç‚¹
 					for (size_t oi = 0; oi < dimOffset.size(); ++oi)
 					{
 						const auto& offset = dimOffset[oi];
@@ -490,7 +487,7 @@ namespace d3s {
 		{
 			if (indices.empty())
 			{
-				PCS_WARN("[EuclideanVoxelCluster] ¾ÛÀàÊäÈëµã¼¯Îª¿Õ.");
+				PCS_WARN("[EuclideanVoxelCluster] èšç±»è¾“å…¥ç‚¹é›†ä¸ºç©º.");
 				return;
 			}
 
@@ -500,7 +497,7 @@ namespace d3s {
 			std::vector<std::vector<Grid3D::Index>> components;
 			GetVoxelGridConnectComponents(grid, components);
 
-			// ÅÅ³ı·ÇµçÁ¦Ïß×é¼şºÍµãÊı²»×ãµÄ×é¼ş
+			// æ’é™¤éç”µåŠ›çº¿ç»„ä»¶å’Œç‚¹æ•°ä¸è¶³çš„ç»„ä»¶
 			for (auto iter = components.begin(); iter != components.end(); ++iter)
 			{
 				const auto& component = *iter;
@@ -519,9 +516,9 @@ namespace d3s {
 								   cell->GetIndices().end());
 				}
 
-				//[ÎÊÌâ]£ºµ¥¸öÔëµãÎŞ·¨Ê¶±ğ
-				//[ÀúÊ·Ô­Òò]£ºµ¥¸öµãµÄÍø¸ñ»®·Ö±»ÌŞ³ı
-				//[ĞŞ¸ÄÈË]£ºÀî³É 2023/09/11
+				//[é—®é¢˜]ï¼šå•ä¸ªå™ªç‚¹æ— æ³•è¯†åˆ«
+				//[å†å²åŸå› ]ï¼šå•ä¸ªç‚¹çš„ç½‘æ ¼åˆ’åˆ†è¢«å‰”é™¤
+				//[ä¿®æ”¹äºº]ï¼šææˆ 2023/09/11
 				if (cluster.size() >= minPts && cluster.size() < maxPts)
 					clusters.push_back(cluster);
 			}

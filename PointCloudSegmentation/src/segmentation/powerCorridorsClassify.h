@@ -6,11 +6,14 @@
 // 修改描述：
 // 文件版权：江西博微新技术有限公司
 //////////////////////////////////////////////////////////////////////
-#pragma once
+#ifndef POWER_CORRIDORS_CLASSIFY_H_
+#define POWER_CORRIDORS_CLASSIFY_H_
 
-#include "../utils/threading.h"
-#include "../core/pointTypes.h"
+#include <src/utils/threading.h>
+#include <src/core/pointTypes.h>
+
 #include <osg/Vec3d>
+
 namespace d3s {
 	namespace pcs {
 
@@ -138,3 +141,6 @@ namespace d3s {
 
 	}
 }
+
+
+#endif // POWER_CORRIDORS_CLASSIFY_H_

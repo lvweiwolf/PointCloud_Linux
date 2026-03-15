@@ -1,13 +1,13 @@
-//stdafx.h
-#include "enviromentClassify.h"
+#include <src/segmentation/enviromentClassify.h>
+#include <src/segmentation/gridCell.h>
+#include <src/segmentation/buildingExtraction.h>
+#include <src/segmentation/improve/roadClassifier.h>
 
-#include <numeric>
+#include <include/ClassificationDef.h>
 
-#include "gridCell.h"
-#include "buildingExtraction.h"
-#include "../segmentation/improve/roadClassifier.h"
-#include <ClassificationDef.h>
-#include "../utils/logging.h"
+#include <src/utils/logging.h>
+
+
 namespace d3s {
 	namespace pcs {
 
@@ -61,7 +61,7 @@ namespace d3s {
 
 		void EnviromentClassify::Run()
 		{
-			// ¼æÈİ¿ÕË÷Òı
+			// å…¼å®¹ç©ºç´¢å¼•
 			if (_indices.empty())
 			{
 				_indices.reserve(_input->size());
@@ -77,7 +77,7 @@ namespace d3s {
 				_indices.shrink_to_fit();
 			}
 
-			// Ö²±»¡¢½¨Öş·ÖÀàÇ°½øĞĞ½µÔë
+			// æ¤è¢«ã€å»ºç­‘åˆ†ç±»å‰è¿›è¡Œé™å™ª
 			if (_options.denoise)
 			{
 				double voxelsize = _options.denoise_voxel_size;
@@ -103,17 +103,17 @@ namespace d3s {
 					_indices = inliers;
 			}
 
-			// ¼ÆËã²¢»®·ÖÍø¸ñµ¥Ôª
+			// è®¡ç®—å¹¶åˆ’åˆ†ç½‘æ ¼å•å…ƒ
 			ComputeGridCells(_options.cell_size, _input, _indices, *_grid);
 
-			// Ö²±»³õ²½´ÖÌáÈ¡
+			// æ¤è¢«åˆæ­¥ç²—æå–
 			VegetationCandidateClassify();
 
-			// ÌáÈ¡½¨ÖşÇøÓò
+			// æå–å»ºç­‘åŒºåŸŸ
 			{
 				BuildingExtractionOptions options;
 
-				// Ä¬ÈÏÉèÖÃ
+				// é»˜è®¤è®¾ç½®
 				options.euclidean_cluster_distance = _options.euclidean_cluster_distance;
 				options.euclidean_cluster_min_pts = _options.euclidean_cluster_min_pts;
 				options.planar_ransac_distance = _options.planar_ransac_distance;
@@ -127,7 +127,7 @@ namespace d3s {
 				extractor.Extract();
 			}
 
-			// ÒÔÏÂÎªµÀÂ··ÖÀàµÄÊµÏÖ
+			// ä»¥ä¸‹ä¸ºé“è·¯åˆ†ç±»çš„å®ç°
 			{
 				std::vector<int> ground;
 				ground.reserve(_input->size());
@@ -168,7 +168,7 @@ namespace d3s {
 				GridCell& cell = _grid->at(k);
 				const std::vector<int>& indices = cell.GetIndices();
 
-				// Ìø¹ı²»°üº¬µãÔÆµÄµ¥Ôª
+				// è·³è¿‡ä¸åŒ…å«ç‚¹äº‘çš„å•å…ƒ
 				if (indices.empty())
 					continue;
 

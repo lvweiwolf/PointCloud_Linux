@@ -10,12 +10,8 @@ target_include_directories(PointCloudSegmentation PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}
 	CommonTools
 	${Eigen3_INCLUDE_DIR}
-	${OSG_INCLUDE_DIR} 
-	${OSGEARTH_INCLUDE_DIR}
 	${PCL_INCLUDE_DIR} 
-	${VCG_INCLUDE_DIR} 
-	${LASlib_INCLUDE_DIR}
-	${Ceres_INCLUDE_DIR} 
+	${THIRDPART_INCLUDE_DIR}
 )
 
 # 依赖库引用
@@ -29,6 +25,7 @@ target_link_libraries(PointCloudSegmentation PUBLIC
 	${CGAL_LIBS} 
 	${Ceres_LIBRARY} 
 	${LASlib_LIBRARY} 
+	${ncnn_LIBRARY} 
 )
 
 

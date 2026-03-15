@@ -1,17 +1,14 @@
-//stdafx.h
-#include "powerlineCurve.h"
+#include <src/segmentation/powerlineCurve.h>
+#include <src/algorithm/nonelinear_least_squares.h>
+#include <src/algorithm/geometry2d_op.h>
+#include <src/core/private/cloudProcess.h>
+#include <src/plot/plotHandle.h>
+#include <src/plot/geomCreator.h>
+#include <src/utils/stringutil.h>
 
 #include <osg/Geode>
 #include <osg/MatrixTransform>
 
-#include "../algorithm/nonelinear_least_squares.h"
-#include "../algorithm/geometry2d_op.h"
-
-#include "../core/private/cloudProcess.h"
-
-#include "../plot/plotHandle.h"
-#include "../plot/geomCreator.h"
-#include "../utils/stringutil.h"
 
 namespace d3s {
 	namespace pcs {
@@ -23,7 +20,7 @@ namespace d3s {
 
 			double xdist = fabs(xyz_prime.x() - xmean);
 
-			// X Öá¾àÀë
+			// X è½´è·ç¦»
 			double y = xyz_prime.y();
 			double z = xyz_prime.z();
 
@@ -38,7 +35,7 @@ namespace d3s {
 
 			double sdist = std::sqrt(xdist * xdist + ydist * ydist);
 
-			// Z Öá¾àÀë
+			// Z è½´è·ç¦»
 			double zdist = fabs((a * y * y + b * y + c) - z);
 			double dist = std::sqrt(sdist * sdist + zdist * zdist);
 
@@ -53,31 +50,31 @@ namespace d3s {
 
 			double xdist = fabs(xyz_prime.x() - xmean);
 
-			// X Öá¾àÀë
+			// X è½´è·ç¦»
 			double y = xyz_prime.y();
 			double z = xyz_prime.z();
 
 			double ydist = 0.0;
 			double sdist = std::sqrt(xdist * xdist + ydist * ydist);
 
-			// Z Öá¾àÀë
+			// Z è½´è·ç¦»
 			double zdist = fabs((a * y * y + b * y + c) - z);
 			double dist = std::sqrt(sdist * sdist + zdist * zdist);
 
 			return dist;
 		}
 
-		osg::Vec3d PowerlineCurve::GetMin() const 
-		{ 
-			double z = (a * ymin * ymin + b * ymin + c); 
-			
+		osg::Vec3d PowerlineCurve::GetMin() const
+		{
+			double z = (a * ymin * ymin + b * ymin + c);
+
 			osg::Vec3d local(xmean, ymin, z);
 			osg::Vec3d world = osg::Matrix::inverse(rotate).preMult(local);
 
 			return world;
 		}
 
-		osg::Vec3d PowerlineCurve::GetMax() const 
+		osg::Vec3d PowerlineCurve::GetMax() const
 		{
 			double z = (a * ymax * ymax + b * ymax + c);
 
@@ -87,7 +84,7 @@ namespace d3s {
 			return world;
 		}
 
-		// È«¾Öº¯Êı
+		// å…¨å±€å‡½æ•°
 		//////////////////////////////////////////////////////////////////////////
 		PowerlineCurvePtr PowerlineCurveFitting(PointCloudViewPtr input,
 												const std::vector<int>& cluster,
@@ -114,10 +111,10 @@ namespace d3s {
 			osg::Vec3d curveVec = major;
 			curveVec.normalize();
 
-			const auto& o = input->points[cluster[0]]; // µÚÒ»¸öµãÎªÆğµã
+			const auto& o = input->points[cluster[0]]; // ç¬¬ä¸€ä¸ªç‚¹ä¸ºèµ·ç‚¹
 			osg::Vec3d origin(o.x, o.y, o.z);
 
-			// µ¼Ïß·½Ïò¶ÔÆëµ½ Y Öá
+			// å¯¼çº¿æ–¹å‘å¯¹é½åˆ° Y è½´
 			osg::Matrix rotate = osg::Matrix::rotate(curveVec, osg::Vec3d(0.0, 1.0, 0.0));
 
 			double x_mean = 0.0;
@@ -145,7 +142,7 @@ namespace d3s {
 
 			curveFitting(&data[0], data.size(), a, b, c);
 
-			// µãÔÚYÖáÉÏµÄ×î´ó/×îĞ¡Öµ
+			// ç‚¹åœ¨Yè½´ä¸Šçš„æœ€å¤§/æœ€å°å€¼
 			double ymin = DBL_MAX;
 			double ymax = -DBL_MAX;
 
@@ -155,11 +152,11 @@ namespace d3s {
 				ymax = std::max(ymax, data[i]);
 			}
 
-			// YÖáÇ°ºóÀ©³äÒ»¸öµ¥ÔªµÄ³¤¶È
+			// Yè½´å‰åæ‰©å……ä¸€ä¸ªå•å…ƒçš„é•¿åº¦
 			ymin -= expandLength;
 			ymax += expandLength;
 
-			// ´´½¨µ¼ÏßÇúÏß
+			// åˆ›å»ºå¯¼çº¿æ›²çº¿
 			PowerlineCurvePtr wire =
 				std::make_shared<PowerlineCurve>(rotate, origin, x_mean, ymin, ymax, a, b, c);
 
@@ -168,14 +165,14 @@ namespace d3s {
 				std::vector<osg::Vec3d> verts;
 				osg::Matrix rotateInverse = osg::Matrix::inverse(rotate);
 
-				// °´ 0.5m ¼ä¸ôÉú³Éµã
+				// æŒ‰ 0.5m é—´éš”ç”Ÿæˆç‚¹
 				for (double y = ymin; y < ymax; y += 0.5)
 				{
 					double z = a * y * y + b * y + c;
 					verts.push_back(osg::Vec3d(x_mean, y, z));
 				}
 
-				// ×ª»»µ½ÏßÂ·×ø±ê¿Õ¼ä
+				// è½¬æ¢åˆ°çº¿è·¯åæ ‡ç©ºé—´
 				for (int i = 0; i < (int)verts.size(); ++i)
 				{
 					auto& xyz = verts[i];
@@ -217,10 +214,10 @@ namespace d3s {
 			osg::Vec3d curveVec = major;
 			curveVec.normalize();
 
-			const auto& o = input->points[cluster[0]]; // µÚÒ»¸öµãÎªÆğµã
+			const auto& o = input->points[cluster[0]]; // ç¬¬ä¸€ä¸ªç‚¹ä¸ºèµ·ç‚¹
 			osg::Vec3d origin(o.x, o.y, o.z);
 
-			// µ¼Ïß·½Ïò¶ÔÆëµ½ Y Öá
+			// å¯¼çº¿æ–¹å‘å¯¹é½åˆ° Y è½´
 			osg::Matrix rotate = osg::Matrix::rotate(curveVec, osg::Vec3d(0.0, 1.0, 0.0));
 
 			double x_mean = 0.0;
@@ -248,7 +245,7 @@ namespace d3s {
 
 			curveFitting(&data[0], data.size(), a, b, c);
 
-			// µãÔÚYÖáÉÏµÄ×î´ó/×îĞ¡Öµ
+			// ç‚¹åœ¨Yè½´ä¸Šçš„æœ€å¤§/æœ€å°å€¼
 			double ymin = DBL_MAX;
 			double ymax = -DBL_MAX;
 
@@ -258,7 +255,7 @@ namespace d3s {
 				ymax = std::max(ymax, data[i]);
 			}
 
-			// ¼ÆËã±ß½ç½»µã
+			// è®¡ç®—è¾¹ç•Œäº¤ç‚¹
 			{
 				osg::Vec2d A(x_mean, ymin);
 				osg::Vec2d B(x_mean, ymax);
@@ -287,7 +284,7 @@ namespace d3s {
 				}
 			}
 
-			// ´´½¨µ¼ÏßÇúÏß
+			// åˆ›å»ºå¯¼çº¿æ›²çº¿
 			PowerlineCurvePtr wire =
 				std::make_shared<PowerlineCurve>(rotate, origin, x_mean, ymin, ymax, a, b, c);
 
@@ -296,14 +293,14 @@ namespace d3s {
 				std::vector<osg::Vec3d> verts;
 				osg::Matrix rotateInverse = osg::Matrix::inverse(rotate);
 
-				// °´ 0.5m ¼ä¸ôÉú³Éµã
+				// æŒ‰ 0.5m é—´éš”ç”Ÿæˆç‚¹
 				for (double y = ymin; y < ymax; y += 0.5)
 				{
 					double z = a * y * y + b * y + c;
 					verts.push_back(osg::Vec3d(x_mean, y, z));
 				}
 
-				// ×ª»»µ½ÏßÂ·×ø±ê¿Õ¼ä
+				// è½¬æ¢åˆ°çº¿è·¯åæ ‡ç©ºé—´
 				for (int i = 0; i < (int)verts.size(); ++i)
 				{
 					auto& xyz = verts[i];

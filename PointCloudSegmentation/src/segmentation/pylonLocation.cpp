@@ -1,19 +1,15 @@
-﻿//stdafx.h
-#include "pylonLocation.h"
+#include <src/segmentation/pylonLocation.h>
+
+#include <src/algorithm/math.h>
+#include <src/algorithm/geometry2d_op.h>
+#include <src/plot/geomCreator.h>
+#include <src/plot/plotHandle.h>
+#include <src/core/pointTypes.hpp>
+#include <src/core/private/rasterProcess.h>
+#include <src/core/private/cloudProcess.h>
+#include <src/core/private/statistics.h>
 
 #include <mutex>
-#include <numeric>
-
-#include "../algorithm/math.h"
-#include "../algorithm/geometry2d_op.h"
-
-#include "../plot/geomCreator.h"
-#include "../plot/plotHandle.h"
-
-#include "../core/pointTypes.hpp"
-#include "../core/private/rasterProcess.h"
-#include "../core/private/cloudProcess.h"
-#include "../core/private/statistics.h"
 
 
 // #define RENDER_LOCATION_GRID
@@ -1167,8 +1163,8 @@ namespace d3s {
 			int numRow = std::floor((ymax - ymin) / cellsize) + 1;
 			int numColumn = std::floor((xmax - xmin) / cellsize) + 1;
 
-			CHECK_MSG(numColumn > 0, StringPrintf("xmin=%lf, xmax=%lf.", xmin, xmax));
-			CHECK_MSG(numRow > 0, StringPrintf("ymin=%lf, ymax=%lf.", ymax, ymin));
+			CHECK_MSG(numColumn > 0, StringPrintf("xmin=%lf, xmax=%lf.", xmin, xmax).c_str());
+			CHECK_MSG(numRow > 0, StringPrintf("ymin=%lf, ymax=%lf.", ymax, ymin).c_str());
 
 			// 网格内存分配
 			grid.resize(numColumn, numRow);
