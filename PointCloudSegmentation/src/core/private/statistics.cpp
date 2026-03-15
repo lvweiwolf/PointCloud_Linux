@@ -1,12 +1,11 @@
-//stdafx.h
-#include "statistics.h"
+#include <src/core/private/statistics.h>
+#include <src/core/pointTypes.hpp>
+#include <src/algorithm/math.h>
+#include <src/utils/logging.h>
 
-#include <numeric>
 #include <pcl/PCLPointField.h>
 #include <pcl/common/io.h>
-#include "../../core/pointTypes.hpp"
-#include "../../algorithm/math.h"
-#include "../../utils/logging.h"
+#include <numeric>
 
 namespace d3s {
 	namespace pcs {
@@ -37,12 +36,12 @@ namespace d3s {
 
 			if (distance_idx == -1)
 			{
-				PCS_WARN("[computeMinMax] Î´ÖªµÄ×Ö¶Î¶¨Òå %s.", fieldname.c_str());
+				PCS_WARN("[computeMinMax] æœªçŸ¥çš„å­—æ®µå®šä¹‰ %s.", fieldname.c_str());
 				return;
 			}
 
-			// Í°ÅÅĞò£¬´¦Àí³¬´óÁ¿ÔªËØ
-			// ¸ù¾İbboxµÄ z Öµ·¶Î§£¬°´ÕÕ0.5mµÄ²½³¤ÉèÖÃ¡°Í°¡±µÄÊıÁ¿
+			// æ¡¶æ’åºï¼Œå¤„ç†è¶…å¤§é‡å…ƒç´ 
+			// æ ¹æ®bboxçš„ z å€¼èŒƒå›´ï¼ŒæŒ‰ç…§0.5mçš„æ­¥é•¿è®¾ç½®â€œæ¡¶â€çš„æ•°é‡
 			std::atomic<double> field_min ( DBL_MAX);
 			std::atomic<double> field_max ( - DBL_MAX);
 
@@ -67,7 +66,7 @@ namespace d3s {
 
 			if (numBucket <= 0)
 			{
-				PCS_WARN("[computeMinMax] ·ÖÅäÍ°Ê§°Ü.");
+				PCS_WARN("[computeMinMax] åˆ†é…æ¡¶å¤±è´¥.");
 				return;
 			}
 
@@ -89,11 +88,11 @@ namespace d3s {
 
 			int i, j;
 			for (i = 0; i < numBucket; ++i)
-				if (buckets[i].size() > minpts)
+				if (buckets[i].size() > (size_t)minpts)
 					break;
 
 			for (j = numBucket - 1; j >= 0; --j)
-				if (buckets[j].size() > minpts)
+				if (buckets[j].size() > (size_t)minpts)
 					break;
 
 			if (i < j)
@@ -149,7 +148,7 @@ namespace d3s {
 
 			if (distance_idx == -1)
 			{
-				PCS_WARN("[computeMinMax] Î´ÖªµÄ×Ö¶Î¶¨Òå %s.", fieldname.c_str());
+				PCS_WARN("[computeMinMax] æœªçŸ¥çš„å­—æ®µå®šä¹‰ %s.", fieldname.c_str());
 				return;
 			}
 
@@ -161,7 +160,7 @@ namespace d3s {
 #endif
 			for (int i = 0; i < (int)indices.size(); ++i)
 			{
-				if (pcv.points[indices[i]].label != label)
+				if (pcv.points[indices[i]].label != (const uint32_t)label)
 					continue;
 				const uint8_t* pt_data = reinterpret_cast<const uint8_t*>(&pcv.points[indices[i]]);
 
@@ -182,7 +181,7 @@ namespace d3s {
 
 			if (numBucket <= 0)
 			{
-				PCS_WARN("[computeMinMax] ·ÖÅäÍ°Ê§°Ü.");
+				PCS_WARN("[computeMinMax] åˆ†é…æ¡¶å¤±è´¥.");
 				return;
 			}
 
@@ -191,7 +190,7 @@ namespace d3s {
 
 			for (int i = 0; i < (int)indices.size(); ++i)
 			{
-				if (pcv.points[indices[i]].label != label)
+				if (pcv.points[indices[i]].label != (const uint32_t)label)
 					continue;
 
 				const uint8_t* pt_data = reinterpret_cast<const uint8_t*>(&pcv.points[indices[i]]);
@@ -207,11 +206,11 @@ namespace d3s {
 
 			int i, j;
 			for (i = 0; i < numBucket; ++i)
-				if (buckets[i].size() > minpts)
+				if (buckets[i].size() > (size_t)minpts)
 					break;
 
 			for (j = numBucket - 1; j >= 0; --j)
-				if (buckets[j].size() > minpts)
+				if (buckets[j].size() > (size_t)minpts)
 					break;
 
 

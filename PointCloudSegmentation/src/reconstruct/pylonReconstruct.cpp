@@ -1,19 +1,18 @@
-//stdafx.h
-#include "pylonReconstruct.h"
+#include <src/reconstruct/pylonReconstruct.h>
+#include <src/reconstruct/pylonDecompose.h>
+#include <src/reconstruct/pylonMatching.h>
+#include <src/core/pointTypes.h>
+#include <src/utils/logging.h>
 
-#include "pylonDecompose.h"
-#include "pylonMatching.h"
-#include "../core/pointTypes.h"
-#include "../utils/logging.h"
 #include <osg/Matrix>
-#include <cstdint>
+
 namespace d3s {
 	namespace pcs {
 
 		// PylonReconstructOptions
 		//////////////////////////////////////////////////////////////////////////
-		void PylonReconstructOptions::Print() const 
-		{ 
+		void PylonReconstructOptions::Print() const
+		{
 			PCS_INFO("decompose_head_len: %lf", decompose_head_len);
 			PCS_INFO("decompose_z_step: %lf", decompose_z_step);
 			PCS_INFO("decompose_x_step: %lf", decompose_x_step);
@@ -68,7 +67,7 @@ namespace d3s {
 			transform = osg::Matrix::translate(-offset) * transform;
 
 			{
-				// ³õÊ¼»¯¸ËËşµãÔÆ
+				// åˆå§‹åŒ–æ†å¡”ç‚¹äº‘
 				for (size_t i = 0; i < headIndices.size(); ++i)
 				{
 					const auto& p = _input->points[headIndices[i]];
@@ -114,17 +113,17 @@ namespace d3s {
 
 			{
 				PylonMatching match(recon_options, &pylonHead, transform);
-				match.SetMatchingLibrary(libraryFolder + R"(¸ËËş×é¼ş¿â\ËşÍ·\)");
+				match.SetMatchingLibrary(libraryFolder + R"(æ†å¡”ç»„ä»¶åº“\å¡”å¤´\)");
 				match.Matching();
 			}
 			{
 				PylonMatching match(recon_options, &pylonBody, transform);
-				match.SetMatchingLibrary(libraryFolder + R"(¸ËËş×é¼ş¿â\ËşÌå\)");
+				match.SetMatchingLibrary(libraryFolder + R"(æ†å¡”ç»„ä»¶åº“\å¡”ä½“\)");
 				match.Matching();
 			}
 			{
 				PylonMatching match(recon_options, &pylonFoot, transform);
-				match.SetMatchingLibrary(libraryFolder + R"(¸ËËş×é¼ş¿â\Ëş½Å\)");
+				match.SetMatchingLibrary(libraryFolder + R"(æ†å¡”ç»„ä»¶åº“\å¡”è„š\)");
 				match.Matching();
 			}
 		}

@@ -406,7 +406,7 @@ namespace d3s {
 			{
 				const auto& leafContainer = tree_it.getLeafContainer();
 
-				if (leafContainer.getSize() <= minpts)
+				if (leafContainer.getSize() <= (size_t)minpts)
 					continue;
 
 				leafContainer.getPointIndices(inliners);
@@ -574,7 +574,7 @@ namespace d3s {
 
 			for (size_t i = 0; i < pcv.size(); ++i)
 			{
-				if (pcv[i].label == label)
+				if (pcv[i].label == (const uint32_t)label)
 					indices.push_back((int)i);
 			}
 		}
@@ -593,8 +593,11 @@ namespace d3s {
 			{
 				const auto& p = pcv[i];
 
-				if (xmin <= p.x && ymin <= p.y && p.x < xmax && p.y < ymax && p.label == label)
+				if (xmin <= p.x && ymin <= p.y && p.x < xmax && p.y < ymax &&
+					p.label == (const uint32_t)label)
+				{
 					indices.push_back(i);
+				}
 			}
 		}
 

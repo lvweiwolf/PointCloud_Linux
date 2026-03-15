@@ -1,17 +1,16 @@
-//stdafx.h
-#include "tileToLod.h"
-
-#include <random>
+#include <src/io/tileToLod.h>
+#include <src/utils/logging.h>
 
 #include <osg/Geode>
 #include <osg/Geometry>
 #include <osg/PagedLOD>
 #include <osg/Point>
-
 #include <osgDB/WriteFile>
+
 #include <cassert>
+#include <random>
 #include <string>
-#include "../utils/logging.h"
+
 namespace d3s {
 	namespace pcs {
 		namespace io {
@@ -165,7 +164,7 @@ namespace d3s {
 
 				if (!build)
 				{
-					PCS_ERROR("[pcl::io::TileToLOD::Generate] KDTree Éú³ÉÊ§°Ü .");
+					PCS_ERROR("[pcl::io::TileToLOD::Generate] KDTree ï¿½ï¿½ï¿½ï¿½Ê§ï¿½ï¿½ .");
 					return false;
 				}
 
@@ -338,9 +337,8 @@ namespace d3s {
 					{
 						if (!osgDB::writeNodeFile(*(nodeGeode.get()), saveFileName))
 						{
-							PCS_ERROR(
-								"[pcl::io::TileToLOD::BuildNode] Write node file %s failed!",
-								saveFileName.c_str());
+							PCS_ERROR("[pcl::io::TileToLOD::BuildNode] Write node file %s failed!",
+									  saveFileName.c_str());
 
 							return false;
 						}
@@ -440,9 +438,8 @@ namespace d3s {
 					{
 						if (!osgDB::writeNodeFile(*(mt.get()), saveFileName))
 						{
-							PCS_ERROR(
-								"[pcl::io::TileToLOD::BuildNode] Write node file %s failed!",
-								saveFileName.c_str());
+							PCS_ERROR("[pcl::io::TileToLOD::BuildNode] Write node file %s failed!",
+									  saveFileName.c_str());
 							return false;
 						}
 					}

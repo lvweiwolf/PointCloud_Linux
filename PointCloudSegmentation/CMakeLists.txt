@@ -11,6 +11,7 @@ target_include_directories(PointCloudSegmentation PUBLIC
 	CommonTools
 	${Eigen3_INCLUDE_DIR}
 	${OSG_INCLUDE_DIR} 
+	${OSGEARTH_INCLUDE_DIR}
 	${PCL_INCLUDE_DIR} 
 	${VCG_INCLUDE_DIR} 
 	${LASlib_INCLUDE_DIR}
@@ -21,6 +22,9 @@ target_include_directories(PointCloudSegmentation PUBLIC
 target_link_libraries(PointCloudSegmentation PUBLIC 
 	CommonTools 
 	OpenMP::OpenMP_CXX 
+	Vulkan::Vulkan
+	${OSG_LIBS} 
+	${OSGEARTH_LIBS}
 	${PCL_LIBS} 
 	${CGAL_LIBS} 
 	${Ceres_LIBRARY} 

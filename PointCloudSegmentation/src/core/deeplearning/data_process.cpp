@@ -1,28 +1,19 @@
-// µãÔÆÉî¶ÈÑ§Ï°·Ö¸îÊı¾İÔ¤´¦Àí
+// ç‚¹äº‘æ·±åº¦å­¦ä¹ åˆ†å‰²æ•°æ®é¢„å¤„ç†
 //////////////////////////////////////////////////////////////////////////
-//stdafx.h
-#include "data_process.h"
+#include <src/core/deeplearning/data_process.h>
+#include <src/core/private/filters.h>
+#include <src/core/private/statistics.h>
+#include <src/core/private/cloudProcess.h>
+#include <src/plot/plotHandle.h>
+#include <src/utils/logging.h>
 
 #include <numeric>
-#include <random>
 
-#include "../../core/private/filters.h"
-#include "../../core/private/statistics.h"
-#include "../../core/private/cloudProcess.h"
-
-#include "../../plot/plotHandle.h"
-#include "../pointTypes.h"
-#include <vector>
-#include "../../utils/logging.h"
-#include <cstddef>
 #define MIN_POINTS_BLOCK 100
 #define RENDER_BLOCK_DEBUG
 
-
 namespace d3s {
 	namespace pcs {
-
-		
 		//////////////////////////////////////////////////////////////////////////
 		DataProcess::DataProcess(PointCloudViewPtr cloud) : _cloud(cloud)
 		{
@@ -41,7 +32,7 @@ namespace d3s {
 										 std::vector<std::vector<int>>& blockIndices,
 										 std::vector<PointCloudViewPtr>& blocks)
 		{
-			PCS_INFO("[DataProcess] ¿ªÊ¼½øĞĞµãÔÆÊı¾İ·Ö¿é...");
+			PCS_INFO("[DataProcess] å¼€å§‹è¿›è¡Œç‚¹äº‘æ•°æ®åˆ†å—...");
 			PCS_INFO("\n\t numPoint = %d\n\t blockSize = %lf\n\t stride = %lf\n\t",
 					 numPoint,
 					 blockSize,
@@ -56,18 +47,18 @@ namespace d3s {
 			{
 				PCS_WARN(
 					"[DataProcess] parameter 'stride' must greater than parameter 'blockSize'");
-				
+
 				return;
 			}
 
-			// ¼ÆËãµãÔÆ±ß½ç¿ò
+			// è®¡ç®—ç‚¹äº‘è¾¹ç•Œæ¡†
 			osg::BoundingBox bbox;
 			computeMinMax3D(*_cloud, bbox);
 
-			// ceilÏòÉÏÈ¡Õû
+			// ceilå‘ä¸Šå–æ•´
 			int numCols = int(std::ceil((bbox.xMax() - bbox.xMin() - blockSize) / stride)) + 1;
-			int numRows = int(std::ceil((bbox.yMax() - bbox.yMin() - blockSize) / stride)) + 1; 
-			
+			int numRows = int(std::ceil((bbox.yMax() - bbox.yMin() - blockSize) / stride)) + 1;
+
 			std::vector<double> xbegin_list, ybegin_list;
 
 			for (int r = 0; r < numRows; ++r)
@@ -82,11 +73,11 @@ namespace d3s {
 			std::vector<std::vector<int>> blocks_indices(numRows * numCols);
 			std::vector<bool> mask(numRows * numCols, false);
 
-			// Í³¼Æ·Ö¿éµãÔÆ
+			// ç»Ÿè®¡åˆ†å—ç‚¹äº‘
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-			for (int idx = 0; idx < xbegin_list.size(); ++idx)
+			for (int idx = 0; idx < (int)xbegin_list.size(); ++idx)
 			{
 				double xbegin = xbegin_list[idx];
 				double ybegin = ybegin_list[idx];
@@ -131,7 +122,7 @@ namespace d3s {
 				max_indices_num = std::max(max_indices_num, indices.size());
 				min_indices_num = std::min(min_indices_num, indices.size());
 			}
-		
+
 			size_t numPointsSampled = 0;
 
 #ifdef _OPENMP
@@ -157,29 +148,30 @@ namespace d3s {
 				blockIndices.push_back(blocks_indices[i]);
 			}
 
-			// ¹¹ÔìµãÔÆ
+			// æ„é€ ç‚¹äº‘
 			for (const auto& indices : blockIndices)
 			{
 				PointCloudViewPtr blockCloud = new PointCloudView<PointPCLH>();
-				blockCloud->epsg = _cloud->epsg;	// ×ø±êÏµ
+				blockCloud->epsg = _cloud->epsg; // åæ ‡ç³»
 				blockCloud->reserve(indices.size());
 
 				for (const auto& index : indices)
 					blockCloud->push_back(_cloud->points[index]);
-				
+
 				computeMinMax3D(*blockCloud, blockCloud->bbox);
 				blocks.push_back(blockCloud);
 			}
 
-			PCS_INFO("[DataProcess] µãÔÆÊı¾İ·Ö¿éÍê³É.");
-			PCS_INFO("\n\t ¿éÊıÁ¿ = %d\n\t ×î´ó¿éµãÊı = %d\n\t ×îĞ¡¿éµãÊı = %d\n\t ²ÉÑùºó×ÜµãÊı = %d",
-					 blockIndices.size(),
-					 max_indices_num,
-					 min_indices_num,
-					 numPointsSampled);
+			PCS_INFO("[DataProcess] ç‚¹äº‘æ•°æ®åˆ†å—å®Œæˆ.");
+			PCS_INFO(
+				"\n\t å—æ•°é‡ = %d\n\t æœ€å¤§å—ç‚¹æ•° = %d\n\t æœ€å°å—ç‚¹æ•° = %d\n\t é‡‡æ ·åæ€»ç‚¹æ•° = %d",
+				blockIndices.size(),
+				max_indices_num,
+				min_indices_num,
+				numPointsSampled);
 		}
 
-		void DataProcess::Normalized(std::vector<PointCloudViewPtr>& blocks) 
+		void DataProcess::Normalized(std::vector<PointCloudViewPtr>& blocks)
 		{
 #ifdef _OPENMP
 #pragma omp parallel for
@@ -187,13 +179,6 @@ namespace d3s {
 			for (int i = 0; i < (int)blocks.size(); ++i)
 			{
 				PointCloudViewPtr blockCloud = blocks[i];
-				auto& bbox = blockCloud->bbox;
-				
-				auto center = bbox.center();
-				
-				double xsize = bbox.xMax() - bbox.xMin();
-				double ysize = bbox.yMax() - bbox.yMin();
-				double zsize = bbox.zMax() - bbox.zMin();
 				
 				double xmean = 0.0;
 				double ymean = 0.0;
@@ -205,7 +190,7 @@ namespace d3s {
 				for (size_t j = 0; j < size; ++j)
 				{
 					auto& p = blockCloud->points[j];
-					
+
 					xmean += (p.x / (double)size);
 					ymean += (p.y / (double)size);
 					zmean += (p.z / (double)size);
@@ -226,7 +211,7 @@ namespace d3s {
 					double distance = std::sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
 					max_distance = std::max(max_distance, distance);
 				}
-				
+
 				for (size_t j = 0; j < size; ++j)
 				{
 					auto& p = blockCloud->points[j];
@@ -234,7 +219,6 @@ namespace d3s {
 					p.y /= max_distance;
 					p.z /= max_distance;
 				}
-
 			}
 		}
 	}

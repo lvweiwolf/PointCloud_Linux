@@ -6,8 +6,11 @@
 // 修改描述：
 // 文件版权：江西博微新技术有限公司
 //////////////////////////////////////////////////////////////////////
-#pragma once
-#include "../pointTypes.h"
+#ifndef FILERS_H_
+#define FILERS_H_
+
+#include <src/core/pointTypes.h>
+
 namespace d3s {
 	namespace pcs {
 
@@ -76,3 +79,5 @@ namespace d3s {
 											   size_t numSample);
 	}
 }
+
+#endif // FILERS_H_

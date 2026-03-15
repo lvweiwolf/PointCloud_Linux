@@ -1,7 +1,6 @@
-//stdafx.h
-#include "pointCloudToLod.h"
-
-#include "tileToLod.h"
+#include <src/io/pointCloudToLod.h>
+#include <src/io/tileToLod.h>
+#include <src/utils/logging.h>
 
 #include <osg/MatrixTransform>
 #include <osgDB/ReadFile>
@@ -11,7 +10,7 @@
 
 #include <memory>
 #include <vector>
-#include "../utils/logging.h"
+
 namespace d3s {
 	namespace pcs {
 		namespace io {
@@ -49,8 +48,7 @@ namespace d3s {
 					return false;
 				}
 
-				PCS_INFO("[pcl::io::PointCloudToLOD::Export] Export mode: %s.",
-						 exportMode.c_str());
+				PCS_INFO("[pcl::io::PointCloudToLOD::Export] Export mode: %s.", exportMode.c_str());
 
 				// check color mode
 				ColorMode eColorMode;
@@ -192,7 +190,7 @@ namespace d3s {
 					pRoot->setMatrix(
 						osg::Matrix::translate(l_oOffset.x(), l_oOffset.y(), l_oOffset.z()));
 
-					for (int i = 0; i < tileRelativePaths.size(); i++)
+					for (int i = 0; i < (int)tileRelativePaths.size(); i++)
 					{
 						std::string tilepath = output + "/Data/" + tileRelativePaths[i];
 						osg::ref_ptr<osg::Node> tileNode = osgDB::readNodeFile(tilepath);

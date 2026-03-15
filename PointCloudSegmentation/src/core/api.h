@@ -1,5 +1,5 @@
-#ifndef API_H_
-#define API_H_
+#ifndef CORE_API_H_
+#define CORE_API_H_
 
 #include <src/core/pointTypes.h>
 
@@ -147,4 +147,4 @@ namespace d3s {
 }
 
 
-#endif // API_H_
+#endif // CORE_API_H_

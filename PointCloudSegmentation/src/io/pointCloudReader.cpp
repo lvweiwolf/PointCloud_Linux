@@ -22,7 +22,7 @@ namespace d3s {
 
 				if (!_lasReader)
 				{
-					PCS_ERROR("[PointCloudReader::PointCloudReader] ÎŞ·¨´ò¿ªÎÄ¼ş '%s'.",
+					PCS_ERROR("[PointCloudReader::PointCloudReader] æ— æ³•æ‰“å¼€æ–‡ä»¶ '%s'.",
 							  filename.c_str());
 
 					return;
@@ -35,7 +35,7 @@ namespace d3s {
 
 				if (_lasHeader->vlr_geo_keys && _lasHeader->vlr_geo_key_entries)
 				{
-					// ´òÓ¡×ø±êÍ¶Ó°ĞÅÏ¢
+					// æ‰“å°åæ ‡æŠ•å½±ä¿¡æ¯
 					for (U16 i = 0; i < _lasHeader->vlr_geo_keys->number_of_keys; ++i)
 					{
 						if (_lasHeader->vlr_geo_key_entries[i].key_id == 3072)
@@ -51,8 +51,8 @@ namespace d3s {
 					std::string strWKT = getWktFromEPSGCode(epsg_code);
 					_epsg = epsg_code;
 
-					PCS_INFO("[PointCloudReader::PointCloudReader] ×ø±êÏµ EPSG: %d", epsg_code);
-					PCS_INFO("[PointCloudReader::PointCloudReader] ×ø±êÏµ WKT: %s", strWKT.c_str());
+					PCS_INFO("[PointCloudReader::PointCloudReader] åæ ‡ç³» EPSG: %d", epsg_code);
+					PCS_INFO("[PointCloudReader::PointCloudReader] åæ ‡ç³» WKT: %s", strWKT.c_str());
 				}
 
 
@@ -93,12 +93,12 @@ namespace d3s {
 
 				if (_lasReader->read_point())
 				{
-					// ¼õÈ¥Æ«ÒÆÁ¿
+					// å‡å»åç§»é‡
 					point.P[0] = _lasReader->point.get_x() - _offset.x();
 					point.P[1] = _lasReader->point.get_y() - _offset.y();
 					point.P[2] = _lasReader->point.get_z() - _offset.z();
 
-					// Èç¹û´æÔÚÑÕÉ«
+					// å¦‚æœå­˜åœ¨é¢œè‰²
 					if (_lasReader->point.have_rgb)
 					{
 						point.C[0] = _lasReader->point.rgb[0];
@@ -125,12 +125,12 @@ namespace d3s {
 
 				if (_lasReader->read_point())
 				{
-					// ¼õÈ¥Æ«ÒÆÁ¿
+					// å‡å»åç§»é‡
 					point.data[0] = _lasReader->point.get_x() - _offset.x();
 					point.data[1] = _lasReader->point.get_y() - _offset.y();
 					point.data[2] = _lasReader->point.get_z() - _offset.z();
 
-					// Èç¹û´æÔÚÑÕÉ«
+					// å¦‚æœå­˜åœ¨é¢œè‰²
 					if (_lasReader->point.have_rgb)
 					{
 						if (_lasReader->point.rgb[0] > 255)

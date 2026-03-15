@@ -1,11 +1,10 @@
-//stdafx.h
-#include "preprocess_op.h"
+#include <src/core/deeplearning/preprocess_op.h>
 
 namespace d3s {
 	namespace pcs {
 		namespace paddlecls {
 
-			 void Permute::Run(const cv::Mat* im, float* data)
+			void Permute::Run(const cv::Mat* im, float* data)
 			{
 				int rh = im->rows;
 				int rw = im->cols;

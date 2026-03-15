@@ -29,6 +29,8 @@ include(${PROJECT_SOURCE_DIR}/../ThirdPart/toolchain.cmake)
 
 find_package(OpenMP REQUIRED)
 
+find_package(Vulkan REQUIRED)
+
 
 # 头文件搜索路径
 # include_directories(${PROJECT_SOURCE_DIR}/CommonTools)

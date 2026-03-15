@@ -1,6 +1,7 @@
 #include <src/core/private/cloudProcess.h>
 #include <src/core/private/statistics.h>
 #include <src/core/pointTypes.h>
+
 #include <src/utils/logging.h>
 #include <src/algorithm/registration.h>
 #include <src/algorithm/math.h>

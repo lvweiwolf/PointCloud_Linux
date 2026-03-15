@@ -1,10 +1,14 @@
-#pragma once
-#include <float.h>
+#ifndef TILE_TO_LOD_H_
+#define TILE_TO_LOD_H_
+
+#include <src/core/pointTypes.h>
+
 #include <osg/BoundingBox>
 #include <osg/Geode>
 #include <osg/Vec4>
+
 #include <vector>
-#include "../core/pointTypes.h"
+
 namespace osg {
 	class Geode;
 }
@@ -92,3 +96,5 @@ namespace d3s {
 		}
 	}
 }
+
+#endif // TILE_TO_LOD_H_

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef PREPROCESS_OP_H_
+#define PREPROCESS_OP_H_
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/opencv.hpp>
@@ -37,3 +38,5 @@ namespace d3s {
 		}
 	}
 }
+
+#endif // PREPROCESS_OP_H_

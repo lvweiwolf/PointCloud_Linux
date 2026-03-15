@@ -1,7 +1,11 @@
-#pragma once
-#include "pointCloudReader.h"
+#ifndef POINT_CLOUD_TO_LOD_H_
+#define POINT_CLOUD_TO_LOD_H_
+
+#include <src/io/pointCloudReader.h>
+
 #include <string>
 #include <memory>
+
 namespace d3s {
 	namespace pcs {
 		namespace io {
@@ -44,3 +48,5 @@ namespace d3s {
 		}
 	}
 }
+
+#endif // POINT_CLOUD_TO_LOD_H_

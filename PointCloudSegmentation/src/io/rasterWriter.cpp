@@ -1,7 +1,6 @@
-//stdafx.h
-#include "rasterWriter.h"
+#include <src/io/rasterWriter.h>
 
-#include "../algorithm/gdal_raster.h"
+#include <src/algorithm/gdal_raster.h>
 
 namespace d3s {
 	namespace pcs {
@@ -27,11 +26,12 @@ namespace d3s {
 
 			for (const std::string& name : _rasterNames)
 			{
+				std::string info = "Raster '" + name + "' not found.";
 				CHECK_MSG(std::find_if(_rasters.begin(),
 									   _rasters.end(),
 									   [name](const Rasterd* r) { return r->name() == name; }) ==
 							  _rasters.end(),
-						  "Raster '" + name + "' not found.");
+						  info.c_str());
 			}
 
 

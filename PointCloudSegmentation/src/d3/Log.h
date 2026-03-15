@@ -1,8 +1,8 @@
 #ifndef D3S_LOG_H_
 #define D3S_LOG_H_
 
-
 #include <src/d3/Singleton.h>
+
 #include <spdlog/spdlog.h>
 
 // #define TINYGLTF_DUMP_TO_LOG

@@ -171,9 +171,6 @@ namespace d3s {
 						  const PointCloudView<PointPCLH>& target,
 						  const osg::Matrix& matrix);
 
-
-
-
 	}
 }
 

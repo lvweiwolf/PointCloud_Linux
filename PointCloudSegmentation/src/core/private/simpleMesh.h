@@ -1,18 +1,20 @@
 //////////////////////////////////////////////////////////////////////
-// ÎÄ¼şÃû³Æ£ºsimpleMesh.h
-// ¹¦ÄÜÃèÊö£º¼òÒ×Íø¸ñÀà
-// ´´½¨±êÊ¶£ºÂÀÎ°	2022/12/5
-// ĞŞ¸Ä±êÊ¶£º
-// ĞŞ¸ÄÃèÊö£º
-// ÎÄ¼ş°æÈ¨£º½­Î÷²©Î¢ĞÂ¼¼ÊõÓĞÏŞ¹«Ë¾
+// æ–‡ä»¶åç§°ï¼šsimpleMesh.h
+// åŠŸèƒ½æè¿°ï¼šç®€æ˜“ç½‘æ ¼ç±»
+// åˆ›å»ºæ ‡è¯†ï¼šå•ä¼Ÿ	2022/12/5
+// ä¿®æ”¹æ ‡è¯†ï¼š
+// ä¿®æ”¹æè¿°ï¼š
+// æ–‡ä»¶ç‰ˆæƒï¼šæ±Ÿè¥¿åšå¾®æ–°æŠ€æœ¯æœ‰é™å…¬å¸
 //////////////////////////////////////////////////////////////////////
-#pragma once
+#ifndef SIMPLE_MESH_H_
+#define SIMPLE_MESH_H_
 
-#include "../../algorithm/mesh.h"
-#include <vector>
-#include <memory>
+#include <src/algorithm/mesh.h>
+
 #include <osg/BoundingBox>
 #include <osg/Node>
+
+#include <vector>
 
 namespace d3s {
 	namespace pcs {
@@ -45,23 +47,23 @@ namespace d3s {
 			~SimpleMesh() override;
 			
 			/**
-			 *  @brief    Íø¸ñÈı½ÇÃæÊıÁ¿
+			 *  @brief    ç½‘æ ¼ä¸‰è§’é¢æ•°é‡
 			 *
 			 *  @return   unsigned
 			 */
 			size_t numTriangles() const override;
 
 			/**
-			 *  @brief    Íø¸ñ¶¥µãÊıÁ¿
+			 *  @brief    ç½‘æ ¼é¡¶ç‚¹æ•°é‡
 			 *
 			 *  @return   size_t
 			 */
 			size_t numVertices() const override;
 
 			/**
-			 *  @brief    »ñµÃÍø¸ñÈı½ÇÃæ
+			 *  @brief    è·å¾—ç½‘æ ¼ä¸‰è§’é¢
 			 *
-			 *  @param    size_t index					Èı½ÇÃæË÷Òı
+			 *  @param    size_t index					ä¸‰è§’é¢ç´¢å¼•
 			 *
 			 *  @return   d3s::pcs::GenericTriangle*
 			 */
@@ -70,7 +72,7 @@ namespace d3s {
 			void getTriangle(size_t index, size_t& v1, size_t& v2, size_t& v3) override;
 
 			/**
-			 *  @brief    »ñµÃÍø¸ñ¶¥µã
+			 *  @brief    è·å¾—ç½‘æ ¼é¡¶ç‚¹
 			 *
 			 *  @param    size_t index
 			 *
@@ -83,18 +85,18 @@ namespace d3s {
 			bool normalsAvailable() const override;
 
 			/**
-			 *  @brief    ·¨Ïß²åÖµ
+			 *  @brief    æ³•çº¿æ’å€¼
 			 *
-			 *  @param    size_t index					Èı½ÇÃæË÷Òı
-			 *  @param    const CCVector3 & P			Èı½ÇÃæÄÚµÄµã
-			 *  @param    CCVector3 & N					²îÖµµÄ·¨Ïß
+			 *  @param    size_t index					ä¸‰è§’é¢ç´¢å¼•
+			 *  @param    const CCVector3 & P			ä¸‰è§’é¢å†…çš„ç‚¹
+			 *  @param    CCVector3 & N					å·®å€¼çš„æ³•çº¿
 			 *
 			 *  @return   bool
 			 */
 			bool interpolateNormals(size_t index, const CCVector3& P, CCVector3& N) override;
 
 			/**
-			 *  @brief    ¼ÆËãÍø¸ñ·¨Ïß
+			 *  @brief    è®¡ç®—ç½‘æ ¼æ³•çº¿
 			 *
 			 *  @return   void
 			 */
@@ -104,9 +106,9 @@ namespace d3s {
 			using TriangleIndexesContainer = std::vector<VerticesIndexes>;
 			using VectorContainer = std::vector<CCVector3>;
 
-			TriangleIndexesContainer _triangles; // Íø¸ñÈı½ÇĞÎ
-			VectorContainer _vertices;			 // Íø¸ñ¶¥µã
-			VectorContainer _normals;			 // ¶¥µã·¨Ïß
+			TriangleIndexesContainer _triangles; // ç½‘æ ¼ä¸‰è§’å½¢
+			VectorContainer _vertices;			 // ç½‘æ ¼é¡¶ç‚¹
+			VectorContainer _normals;			 // é¡¶ç‚¹æ³•çº¿
 
 			SimpleTriangle _dummyTriangle;
 			osg::BoundingBox _bbox;
@@ -114,3 +116,5 @@ namespace d3s {
 
 	}
 }
+
+#endif // SIMPLE_MESH_H_

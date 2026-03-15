@@ -1,13 +1,12 @@
-//stdafx.h
-#include "simpleMesh.h"
+#include <src/core/private/simpleMesh.h>
+#include <src/utils/logging.h>
 
 #include <osg/Geode>
 #include <osg/Transform>
 #include <osg/NodeVisitor>
 #include <osg/TriangleFunctor>
 #include <osg/Node>
-#include <memory>
-#include "../../utils/logging.h"
+
 namespace d3s {
 	namespace pcs {
 
@@ -15,16 +14,14 @@ namespace d3s {
 		{
 			osg::BoundingBox bbox;
 			std::vector<osg::Vec3d> vertices;
-			
+
 			std::vector<VerticesIndexes> triangles;
 			std::map<osg::Vec3d, size_t> vertex_index_map;
 		};
 
 		struct CollectTriangle
 		{
-			CollectTriangle()
-			{
-			}
+			CollectTriangle() {}
 
 			inline void operator()(const osg::Vec3d& v1,
 								   const osg::Vec3d& v2,
@@ -57,15 +54,12 @@ namespace d3s {
 			}
 
 			osg::Matrix m;
-			CollectTriangleCache *cache = nullptr;
+			CollectTriangleCache* cache = nullptr;
 		};
 
 		struct CollectTriangleVisitor : public osg::NodeVisitor
 		{
-			CollectTriangleVisitor()
-				: osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN)
-			{
-			}
+			CollectTriangleVisitor() : osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN) {}
 
 			void apply(osg::Transform& transform)
 			{
@@ -94,7 +88,7 @@ namespace d3s {
 					osg::TriangleFunctor<CollectTriangle> triangleCollector;
 					triangleCollector.cache = &_cache;
 					triangleCollector.m = matrix;
-					
+
 					geode.getDrawable(i)->accept(triangleCollector);
 				}
 			}
@@ -106,11 +100,11 @@ namespace d3s {
 			std::vector<osg::Matrix> _matrixStack;
 			CollectTriangleCache _cache;
 		};
-		
 
-		SimpleMesh::SimpleMesh(osg::ref_ptr<osg::Node> meshNode) 
+
+		SimpleMesh::SimpleMesh(osg::ref_ptr<osg::Node> meshNode)
 		{
-			if (meshNode.valid()) 
+			if (meshNode.valid())
 			{
 				CollectTriangleVisitor ctv;
 				meshNode->accept(ctv);
@@ -129,10 +123,10 @@ namespace d3s {
 
 		size_t SimpleMesh::numVertices() const { return _vertices.size(); }
 
-		GenericTriangle* SimpleMesh::getTriangle(size_t index) 
+		GenericTriangle* SimpleMesh::getTriangle(size_t index)
 		{
 			CHECK(index >= 0 && index < _triangles.size());
-			
+
 			const auto& ti = _triangles.at(index);
 			_dummyTriangle.A = _vertices.at(ti.i1);
 			_dummyTriangle.B = _vertices.at(ti.i2);
@@ -141,7 +135,7 @@ namespace d3s {
 			return &_dummyTriangle;
 		}
 
-		void SimpleMesh::getTriangle(size_t index, size_t& v1, size_t& v2, size_t& v3) 
+		void SimpleMesh::getTriangle(size_t index, size_t& v1, size_t& v2, size_t& v3)
 		{
 			CHECK(index >= 0 && index < _triangles.size());
 			const auto& ti = _triangles.at(index);
@@ -151,13 +145,13 @@ namespace d3s {
 			v3 = ti.i3;
 		}
 
-		const CCVector3* SimpleMesh::getVertex(size_t index) 
+		const CCVector3* SimpleMesh::getVertex(size_t index)
 		{
 			CHECK(index < _vertices.size());
 			return &_vertices.at(index);
 		}
 
-		void SimpleMesh::getVertex(size_t index, CCVector3& P) const 
+		void SimpleMesh::getVertex(size_t index, CCVector3& P) const
 		{
 			CHECK(index < _vertices.size());
 			P = _vertices.at(index);
@@ -165,7 +159,7 @@ namespace d3s {
 
 		bool SimpleMesh::normalsAvailable() const { return _vertices.size() == _normals.size(); }
 
-		bool SimpleMesh::interpolateNormals(size_t index, const CCVector3& P, CCVector3& N) 
+		bool SimpleMesh::interpolateNormals(size_t index, const CCVector3& P, CCVector3& N)
 		{
 			CHECK(index >= 0 && index < _vertices.size());
 
@@ -185,17 +179,17 @@ namespace d3s {
 				CCVector3 B = _vertices[tri.i2];
 				CCVector3 C = _vertices[tri.i3];
 
-				// ÖØÐÄ×ø±êÏµÈ¨ÖØ
+				// é‡å¿ƒåæ ‡ç³»æƒé‡
 				weights.x() = std::sqrt(((P - B) ^ (C - B)).length2()) /*/2*/;
 				weights.y() = std::sqrt(((P - C) ^ (A - C)).length2()) /*/2*/;
 				weights.z() = std::sqrt(((P - A) ^ (B - A)).length2()) /*/2*/;
 
-				// ÕýÔò»¯
+				// æ­£åˆ™åŒ–
 				double sum = weights.x() + weights.y() + weights.z();
 				weights /= sum;
 			}
 
-			// ·¨Ïß²îÖµ
+			// æ³•çº¿å·®å€¼
 			CCVector3 Nd(0, 0, 0);
 
 			{
@@ -216,7 +210,7 @@ namespace d3s {
 			return true;
 		}
 
-		void SimpleMesh::computeNormals() 
+		void SimpleMesh::computeNormals()
 		{
 			_normals.resize(_vertices.size(), CCVector3(0, 0, 0));
 
@@ -232,7 +226,7 @@ namespace d3s {
 				_normals[_triangles[fi].i3] += faceNormal;
 			}
 
-			for (size_t vi = 0; vi < _normals.size(); ++vi) 
+			for (size_t vi = 0; vi < _normals.size(); ++vi)
 			{
 				_normals[vi].normalize();
 			}

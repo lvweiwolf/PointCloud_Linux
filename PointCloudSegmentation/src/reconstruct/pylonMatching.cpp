@@ -1,18 +1,15 @@
-//stdafx.h
-#include "pylonMatching.h"
+#include <src/reconstruct/pylonMatching.h>
+#include <src/core/api.h>
+#include <src/core/private/filters.h>
+#include <src/core/private/statistics.h>
+#include <src/core/private/cloudProcess.h>
+#include <src/utils/misc.h>
+#include <src/utils/logging.h>
+#include <src/utils/stringutil.h>
+#include <src/plot/plotHandle.h>
 
 #include <osg/MatrixTransform>
 #include <osgDB/ReadFile>
-
-#include "../core/private/filters.h"
-#include "../core/private/statistics.h"
-#include "../core/private/cloudProcess.h"
-
-#include "../plot/plotHandle.h"
-#include "../utils/misc.h"
-#include "../utils/logging.h"
-#include "../utils/stringutil.h"
-#include "../core/api.h"
 
 // #define RENDER_PYLON_MODEL
 
@@ -37,7 +34,7 @@ namespace d3s {
 			int numberOfPoints = std::max(500, _options.num_registration);
 			double rmsThreshold = _options.rms_threshold;
 
-			// ¼ÆËã¶ÔÆëµ½XÖáºóµÄ°üÎ§¿ò´óĞ¡
+			// è®¡ç®—å¯¹é½åˆ°Xè½´åçš„åŒ…å›´æ¡†å¤§å°
 			auto alignedBBox = ComputeAlignedBBox();
 
 			PointCloudView<PointPCLH> inputSampled;
@@ -64,7 +61,7 @@ namespace d3s {
 				if (!readPointCloud(filepath, cloud))
 					continue;
 
-				// »¹Ô­µãÔÆÔ­Ê¼×ø±ê
+				// è¿˜åŸç‚¹äº‘åŸå§‹åæ ‡
 				{
 					auto offset = cloud.offset_xyz;
 
@@ -79,7 +76,7 @@ namespace d3s {
 					cloud.offset_xyz = osg::Vec3d();
 				}
 
-				// ¼ÆËã°üÎ§ºĞ
+				// è®¡ç®—åŒ…å›´ç›’
 				computeMinMax3D(cloud, cloud.bbox);
 
 				if (!Similarity(cloud.bbox, alignedBBox))
@@ -111,7 +108,7 @@ namespace d3s {
 			});
 
 			_result.clear();
-			
+
 			for (const auto& r : rank)
 				_result.push_back(r.first);
 
@@ -128,7 +125,7 @@ namespace d3s {
 #endif
 		}
 
-		osg::BoundingBox PylonMatching::ComputeAlignedBBox() 
+		osg::BoundingBox PylonMatching::ComputeAlignedBBox()
 		{
 			osg::BoundingBox bbox;
 
@@ -142,7 +139,7 @@ namespace d3s {
 			return bbox;
 		}
 
-		bool PylonMatching::Similarity(const osg::BoundingBox& lhs, const osg::BoundingBox& rhs) 
+		bool PylonMatching::Similarity(const osg::BoundingBox& lhs, const osg::BoundingBox& rhs)
 		{
 			double threshold = _options.bbox_threshold;
 
@@ -154,7 +151,7 @@ namespace d3s {
 			double H1 = rhs.yMax() - rhs.yMin();
 			double T1 = rhs.zMax() - rhs.zMin();
 
-			
+
 			return fabs(W1 - W0) < threshold && fabs(H1 - H0) < threshold &&
 				   fabs(T1 - T0) < threshold;
 		}

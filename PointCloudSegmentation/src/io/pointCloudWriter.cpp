@@ -1,19 +1,16 @@
-//stdafx.h
-#include "pointCloudWriter.h"
+#include <src/io/pointCloudWriter.h>
+#include <src/io/geoProjectionConverter.h>
+#include <src/core/private/statistics.h>
+#include <src/core/private/gdalProcess.h>
+#include <src/utils/misc.h>
+#include <src/utils/stringutil.h>
+#include <src/utils/logging.h>
 
 #include <numeric>
+
 #include <laswriter.hpp>
+
 #include <pcl/io/pcd_io.h>
-//#include <pcl/io/impl/pcd_io.hpp>
-//#include <pcl/conversions.h>
-
-#include "geoProjectionConverter.h"
-
-#include "../core/private/statistics.h"
-#include "../core/private/gdalProcess.h"
-#include "../utils/misc.h"
-#include "../utils/stringutil.h"
-#include "../utils/logging.h"
 
 namespace d3s {
 	namespace pcs {
@@ -32,7 +29,7 @@ namespace d3s {
 
 				return Write(pcv, indices);
 			}
-	
+
 			bool PointCloudWriter::Write(const PointCloudView<PointPCLH>& pcv,
 										 const std::vector<int>& indices)
 			{
@@ -160,14 +157,14 @@ namespace d3s {
 					laspoint.set_R(p.r);
 					laspoint.set_G(p.g);
 					laspoint.set_B(p.b);
-					// 558136 ������ã���������𳬹�3�֣���3�ּ����ϵ�����޷�������ʾ����ͼ�� ��ͼV1.6.0.19
+					// 558136 ������ã���������𳬹�3�֣���3�ּ����ϵ�����޷�������ʾ����ͼ��
+					// ��ͼV1.6.0.19
 					laspoint.set_user_data(p.label);
 
 					if (!laswriter->write_point(&laspoint))
 					{
-						PCS_ERROR(
-							"[PointCloudWriter::PointCloudWriter] д��� %d ����ʱ����������.",
-							i);
+						PCS_ERROR("[PointCloudWriter::PointCloudWriter] д��� %d ����ʱ����������.",
+								  i);
 
 						writeComplete = false;
 
@@ -218,5 +215,6 @@ namespace d3s {
 }
 
 // 显式实例化 PCL 转换函数
-//#include <pcl/conversions.h>
-///template void pcl::toPCLPointCloud2<d3s::pcs::PointPCLH>(const pcl::PointCloud<d3s::pcs::PointPCLH>&, pcl::PCLPointCloud2&);
+// #include <pcl/conversions.h>
+/// template void pcl::toPCLPointCloud2<d3s::pcs::PointPCLH>(const
+/// pcl::PointCloud<d3s::pcs::PointPCLH>&, pcl::PCLPointCloud2&);
