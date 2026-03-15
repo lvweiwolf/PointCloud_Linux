@@ -1,35 +1,28 @@
-//stdafx.h
-#include "cloudProcess.h"
-//#define PCL_NO_PRECOMPILE
+#include <src/core/private/cloudProcess.h>
+#include <src/core/private/statistics.h>
+#include <src/core/pointTypes.h>
+#include <src/utils/logging.h>
+#include <src/algorithm/registration.h>
+#include <src/algorithm/math.h>
+
 #include <pcl/io/pcd_io.h>
-//#include <pcl/io/impl/pcd_io.hpp>
+#include <pcl/registration/icp.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/features/normal_3d.h>
-
 #include <pcl/common/transforms.h>
 #include <pcl/search/kdtree.h>
 #include <pcl/segmentation/region_growing.h>
 #include <pcl/segmentation/extract_clusters.h>
-//#include <pcl/segmentation/impl/extract_clusters.hpp>
-//#include <pcl/search/impl/kdtree.hpp>
 #include <pcl/segmentation/sac_segmentation.h>
-#include <pcl/registration/icp.h>
+
 #include <osg/Vec3d>
-#include "statistics.h"
 
-#include "../../algorithm/registration.h"
-#include "../../algorithm/math.h"
-
-#include "../../core/pointTypes.h"
-#include "../../utils/logging.h"
 // #define _normalPlanarSegment_PCD_DEBUG
 
 extern std::string DebugDirectory;
 
-namespace d3s
-{
-	namespace pcs
-	{
+namespace d3s {
+	namespace pcs {
 
 		void euclideanCluster(PointCloudView<PointPCLH>& pcv,
 							  const std::vector<int>& indices,
@@ -139,7 +132,7 @@ namespace d3s
 
 			pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>());
 			cloud->points.reserve(indices.size()); // 预先分配内存
-			
+
 			// 初始化点云
 			for (size_t i = 0; i < indices.size(); ++i)
 			{
@@ -154,7 +147,7 @@ namespace d3s
 			pcl::search::Search<pcl::PointXYZ>::Ptr kdtree(new pcl::search::KdTree<pcl::PointXYZ>);
 			kdtree->setInputCloud(cloud);
 
-			features.resize(indices.size(), 0.0f);	// 初始化特征值
+			features.resize(indices.size(), 0.0f); // 初始化特征值
 
 #ifdef _OPENMP
 #pragma omp parallel for
@@ -183,7 +176,7 @@ namespace d3s
 					double lambda1 = 0.0;
 					double lambda2 = 0.0;
 					double lambda3 = 0.0;
-					
+
 					getEigenValues(neighbors, lambda1, lambda2, lambda3); // λ1 > λ2 > λ3
 
 					if (lambda1 != 0.0)
@@ -553,10 +546,10 @@ namespace d3s
 							 double& rms)
 		{
 			typedef pcl::PointXYZ PointT;
-			
+
 			bool covergence = false;
 			double fitscore = DBL_MAX;
-			
+
 			pcl::PointCloud<PointT>::Ptr cloudRegistered(new pcl::PointCloud<PointT>());
 
 			{
@@ -613,7 +606,7 @@ namespace d3s
 				matrix = matrixF;
 			}
 
-			
+
 			double* data = matrix.ptr();
 			rms = ComputeRMS(input, target, matrix); // 计算Hausetoff距离均方误差
 
@@ -645,7 +638,7 @@ namespace d3s
 			{
 				PCS_WARN("[RegistrationICP] ICP配准未收敛!");
 			}
-			
+
 			return covergence;
 		}
 
@@ -694,13 +687,13 @@ namespace d3s
 										  transformation_matrix,
 										  covergence_mse);
 			}
-			
+
 
 			Eigen::Map<Eigen::Matrix<double, 4, 4, Eigen::ColMajor>>(matrix.ptr()) =
 				transformation_matrix;
 
 			const double* data = matrix.ptr();
-			rms = ComputeRMS(input, target, matrix);	// 计算Hausetoff距离均方误差
+			rms = ComputeRMS(input, target, matrix); // 计算Hausetoff距离均方误差
 
 			/*PCS_INFO("[Registration] covergence_mse: %lf", covergence_mse);
 			PCS_INFO("[Registration] RMS: %lf", rms);
@@ -780,7 +773,7 @@ namespace d3s
 
 
 			std::atomic<int> nr(0);
-			std::atomic<double> fitness_score (0.0);
+			std::atomic<double> fitness_score(0.0);
 
 #ifdef _OPENMP
 #pragma omp parallel for

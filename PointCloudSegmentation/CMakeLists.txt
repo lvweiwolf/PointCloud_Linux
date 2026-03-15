@@ -12,7 +12,8 @@ target_include_directories(PointCloudSegmentation PUBLIC
 	${Eigen3_INCLUDE_DIR}
 	${OSG_INCLUDE_DIR} 
 	${PCL_INCLUDE_DIR} 
-	${VCG_INCLUDE_DIR}
+	${VCG_INCLUDE_DIR} 
+	${LASlib_INCLUDE_DIR}
 	${Ceres_INCLUDE_DIR} 
 )
 
@@ -23,6 +24,7 @@ target_link_libraries(PointCloudSegmentation PUBLIC
 	${PCL_LIBS} 
 	${CGAL_LIBS} 
 	${Ceres_LIBRARY} 
+	${LASlib_LIBRARY} 
 )
 
 
