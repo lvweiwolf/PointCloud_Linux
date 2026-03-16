@@ -1,7 +1,12 @@
-#include "PCQueryWrapperToolkit.h"
-#include "../BusinessNode/BnsPointCloudNode.h"
-#include "PointCloudBoxQuery.h"
-#include "../LasFile/PointCloudToolkit.h"
+#include <Segment/PCQueryWrapperToolkit.h>
+#include <Segment/PointCloudBoxQuery.h>
+#include <LasFile/PointCloudToolkit.h>
+#include <BusinessNode/BnsPointCloudNode.h>
+
+#include <Eigen/Core>
+#include <pcl/common/centroid.h>
+#include <pcl/segmentation/sac_segmentation.h>
+
 #define MAX_TYPE 100
 
 pc::data::SDenoiseCfg ReadDenoiseParam()

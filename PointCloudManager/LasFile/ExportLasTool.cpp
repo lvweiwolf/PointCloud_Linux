@@ -9,6 +9,9 @@
 #include <Segment/PointCloudBoxQuery.h>
 #include <Segment/PCQueryWrapperToolkit.h>
 
+#include <include/IGeoProjectionConvertor.h>
+#include <include/PointCloudSegAPI.h>
+
 #include <Tool/FileToolkit.h>
 
 

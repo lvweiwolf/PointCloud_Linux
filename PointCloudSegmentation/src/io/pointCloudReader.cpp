@@ -1,10 +1,10 @@
-//stdafx.h
-#include "pointCloudReader.h"
+#include <src/io/pointCloudReader.h>
 
-#include <lasreader.hpp>
 #include <string>
-#include "../core/private/gdalProcess.h"
-#include "../utils/logging.h"
+#include <LASlib/lasreader.hpp>
+
+#include <src/core/private/gdalProcess.h>
+#include <src/utils/logging.h>
 
 #define U8_CLAMP(n) (((n) <= U8_MIN) ? U8_MIN : (((n) >= U8_MAX) ? U8_MAX : ((U8)(n))))
 
@@ -168,9 +168,9 @@ namespace d3s {
 
 				if (_lasReader->read_point())
 				{
-					point.data[0] = _lasReader->point.get_x()- _offset.x();
-					point.data[1] = _lasReader->point.get_y()- _offset.y();
-					point.data[2] = _lasReader->point.get_z()- _offset.z();
+					point.data[0] = _lasReader->point.get_x() - _offset.x();
+					point.data[1] = _lasReader->point.get_y() - _offset.y();
+					point.data[2] = _lasReader->point.get_z() - _offset.z();
 					point.label = _lasReader->point.classification;
 
 					return true;

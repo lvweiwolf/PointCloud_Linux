@@ -1,20 +1,25 @@
 
-#include "PagedLodPointsVisitor.h"
-#include "../LasFile/PointCloudPropertyTool.h"
-#include "../include/ClassificationDef.h"
-#include "../LasFile/PointCloudToolkit.h"
-#include "PCQueryWrapperToolkit.h"
-#include "../BusinessNode/BnsPointCloudNode.h"
-//#include "PointCloudTool.h"
-//#include "PointCloudCommomTool.h"
-//#include "ClusterManagerSet.h"
-//#include "ClusterManager.h"
-//#include "PointCloudSegmentation/include/ClassificationDef.h"
-//#include <PCQueryWrapperToolkit.h>
-// 植被类型索引
+#include <Segment/PagedLodPointsVisitor.h>
+#include <Segment/PCQueryWrapperToolkit.h>
+
+#include <BusinessNode/BnsPointCloudNode.h>
+#include <LasFile/PointCloudPropertyTool.h>
+#include <LasFile/PointCloudToolkit.h>
+#include <include/ClassificationDef.h>
+
+// #include "PointCloudTool.h"
+// #include "PointCloudCommomTool.h"
+// #include "ClusterManagerSet.h"
+// #include "ClusterManager.h"
+// #include "PointCloudSegmentation/include/ClassificationDef.h"
+// #include <PCQueryWrapperToolkit.h>
+//  植被类型索引
 const int INT__VEGETATION_TYPE_INDEX = 2;
 // 高植被类型索引
 const int INT_HIGH_VEGETATION_TYPE_INDEX = 15;
+
+static const pc::data::PointCloudBoundBox2D dummyBox;
+
 
 CPointReadWriterVisitor::CPointReadWriterVisitor(CPointReadWriter* pWriter, bool bReadWrite)
 	: osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN),
@@ -22,35 +27,42 @@ CPointReadWriterVisitor::CPointReadWriterVisitor(CPointReadWriter* pWriter, bool
 	  _bPolygon(false),
 	  _pWriter(pWriter)
 {
-	//_pClusterManager = CClusterManagerSet::GetInst()->GetClusterManager(_pWriter->_param._strPrjId);
+	//_pClusterManager =
+	// CClusterManagerSet::GetInst()->GetClusterManager(_pWriter->_param._strPrjId);
 }
 
-CPointReadWriterVisitor::~CPointReadWriterVisitor()
-{
+CPointReadWriterVisitor::~CPointReadWriterVisitor() {}
 
-}
-
-void CPointReadWriterVisitor::SetPointCloudIndividualClass(osg::ref_ptr<osg::Vec2Array> pTexCoordArray, size_t texIndex, size_t pointCloudIndex)
+void CPointReadWriterVisitor::SetPointCloudIndividualClass(
+	osg::ref_ptr<osg::Vec2Array> pTexCoordArray,
+	size_t texIndex,
+	size_t pointCloudIndex)
 {
-	if (nullptr == pTexCoordArray || nullptr == _pWriter || nullptr == _pWriter->_param._pPointCloud)
+	if (nullptr == pTexCoordArray || nullptr == _pWriter ||
+		nullptr == _pWriter->_param._pPointCloud)
 		return;
 	uint32_t nType = 0;
 	if (!CPointCloudPropertyTool::GetSegmentProperty(pTexCoordArray, texIndex, nType))
 		return;
 	if (_pWriter->_param._vegetationTypes.end() != _pWriter->_param._vegetationTypes.find(nType))
-		_pWriter->_param._pPointCloud->SetClassification(pointCloudIndex, d3s::pcs::Classification::eHighVegetation);
+		_pWriter->_param._pPointCloud->SetClassification(pointCloudIndex,
+														 d3s::pcs::Classification::eHighVegetation);
 	else if (nType == _pWriter->_param._nGroundType)
-		_pWriter->_param._pPointCloud->SetClassification(pointCloudIndex, d3s::pcs::Classification::eGround);
+		_pWriter->_param._pPointCloud->SetClassification(pointCloudIndex,
+														 d3s::pcs::Classification::eGround);
 }
 
-void CPointReadWriterVisitor::WriteTreeIndividual(const osg::Vec3& point, osg::ref_ptr<osg::Vec2Array> pTexCoordArray
-	, size_t texIndex, size_t pointCloudIndex)
+void CPointReadWriterVisitor::WriteTreeIndividual(const osg::Vec3& point,
+												  osg::ref_ptr<osg::Vec2Array> pTexCoordArray,
+												  size_t texIndex,
+												  size_t pointCloudIndex)
 {
-	if (nullptr == pTexCoordArray || nullptr == _pWriter || nullptr == _pWriter->_param._pPointCloud)
+	if (nullptr == pTexCoordArray || nullptr == _pWriter ||
+		nullptr == _pWriter->_param._pPointCloud)
 		return;
 	osg::Vec3 tmpPnt = point;
 	tmpPnt.z() = _pWriter->_boundingBox.center().z();
-	if(!_pWriter->_boundingBox.contains(tmpPnt))
+	if (!_pWriter->_boundingBox.contains(tmpPnt))
 		return;
 
 	// 单木ID
@@ -60,9 +72,13 @@ void CPointReadWriterVisitor::WriteTreeIndividual(const osg::Vec3& point, osg::r
 }
 
 
-void CPointReadWriterVisitor::WriteSetSegment(const osg::Vec3& screenPoint, osg::ref_ptr<osg::Vec2Array> pTexCoordArray, size_t texIndex, size_t pointCloudIndex)
+void CPointReadWriterVisitor::WriteSetSegment(const osg::Vec3& screenPoint,
+											  osg::ref_ptr<osg::Vec2Array> pTexCoordArray,
+											  size_t texIndex,
+											  size_t pointCloudIndex)
 {
-	if (nullptr == pTexCoordArray || nullptr == _pWriter || nullptr == _pWriter->_param._pPointCloud)
+	if (nullptr == pTexCoordArray || nullptr == _pWriter ||
+		nullptr == _pWriter->_param._pPointCloud)
 		return;
 	if (_bPolygon && !CPointCloudToolkit::PtInPolygon(screenPoint, _pWriter->_vecSelectPoints))
 		return;
@@ -75,42 +91,51 @@ void CPointReadWriterVisitor::WriteSetSegment(const osg::Vec3& screenPoint, osg:
 
 	// 转换分类类型
 	uint32_t nType = _pWriter->_param._pPointCloud->GetClassification(pointCloudIndex);
- 	auto iter = _pWriter->_param._mapConvertType.find(nType);
- 	if (iter != _pWriter->_param._mapConvertType.end())
- 		nType = iter->second;
+	auto iter = _pWriter->_param._mapConvertType.find(nType);
+	if (iter != _pWriter->_param._mapConvertType.end())
+		nType = iter->second;
 
 	// 隐藏噪点
 	auto denoiseCfg = CPCQueryWrapperToolkit::GetDenoiseParam();
-	if (_pWriter->_param._denoiseIndexSet.end() != _pWriter->_param._denoiseIndexSet.find(pointCloudIndex)
-		&& denoiseCfg.notDenoiseTypes.end() == denoiseCfg.notDenoiseTypes.find(nType))
+	if (_pWriter->_param._denoiseIndexSet.end() !=
+			_pWriter->_param._denoiseIndexSet.find(pointCloudIndex) &&
+		denoiseCfg.notDenoiseTypes.end() == denoiseCfg.notDenoiseTypes.find(nType))
 	{
 		CPointCloudPropertyTool::SetDisplayEnableProperty(pTexCoordArray, texIndex, false);
 	}
- 
- 	// 已配置且不勾选则不显示（未配置的分类默认显示）。目前没有高植被类型，默认为植被
- 	auto pIter = _pWriter->_param._vecSegShowTypep.find(nType);
- 	if (_pWriter->_param._vecSegShowTypep.end() == pIter || pIter->second)
- 	{
- 		nType = (nType == INT_HIGH_VEGETATION_TYPE_INDEX ? INT__VEGETATION_TYPE_INDEX : nType);
- 		CPointCloudPropertyTool::SetSegmentProperty(pTexCoordArray, texIndex, nType, false);
- 	}
- 
- 	// 清理指定分类所属的簇
- 	if (_pWriter->_param._clearTypeCluster.end() != _pWriter->_param._clearTypeCluster.find(nCurType))
- 	{
- 		int nClusterID = 0;
- 		if (CPointCloudPropertyTool::GetClusterProperty(pTexCoordArray, texIndex, nClusterID, false) && nClusterID > 0)
- 		{
- 			//toolkit::CCriticalSectionSync cs(_pWriter->_param._pClearCluster->_CSC);
- 			//_pWriter->_param._pClearCluster->_clearCluster.insert(nClusterID);
- 		}
- 	}
+
+	// 已配置且不勾选则不显示（未配置的分类默认显示）。目前没有高植被类型，默认为植被
+	auto pIter = _pWriter->_param._vecSegShowTypep.find(nType);
+	if (_pWriter->_param._vecSegShowTypep.end() == pIter || pIter->second)
+	{
+		nType = (nType == INT_HIGH_VEGETATION_TYPE_INDEX ? INT__VEGETATION_TYPE_INDEX : nType);
+		CPointCloudPropertyTool::SetSegmentProperty(pTexCoordArray, texIndex, nType, false);
+	}
+
+	// 清理指定分类所属的簇
+	if (_pWriter->_param._clearTypeCluster.end() !=
+		_pWriter->_param._clearTypeCluster.find(nCurType))
+	{
+		int nClusterID = 0;
+		if (CPointCloudPropertyTool::GetClusterProperty(pTexCoordArray,
+														texIndex,
+														nClusterID,
+														false) &&
+			nClusterID > 0)
+		{
+			// toolkit::CCriticalSectionSync cs(_pWriter->_param._pClearCluster->_CSC);
+			//_pWriter->_param._pClearCluster->_clearCluster.insert(nClusterID);
+		}
+	}
 }
 
 void CPointReadWriterVisitor::ReadWriteNoBound(osg::ref_ptr<osg::Vec3Array>& vertArray,
-	osg::Matrix& matrix, const osg::Vec3d& boxCenter ,osg::ref_ptr<osg::Vec2Array> pTexCoordArray)
+											   osg::Matrix& matrix,
+											   const osg::Vec3d& boxCenter,
+											   osg::ref_ptr<osg::Vec2Array> pTexCoordArray)
 {
-	if (nullptr == vertArray || nullptr == pTexCoordArray || nullptr == _pWriter || nullptr == _pWriter->_param._pPointCloud)
+	if (nullptr == vertArray || nullptr == pTexCoordArray || nullptr == _pWriter ||
+		nullptr == _pWriter->_param._pPointCloud)
 		return;
 	size_t nVertArraySize = vertArray->size();
 	if (_bReadWrite)
@@ -120,7 +145,9 @@ void CPointReadWriterVisitor::ReadWriteNoBound(osg::ref_ptr<osg::Vec3Array>& ver
 			osg::Vec3 point = (*vertArray)[nVertexIndex];
 			point = matrix.preMult(point);
 			point = point - boxCenter;
-			_pWriter->_param._pPointCloud->FillOsgPoint(point, _pWriter->_param._nBeginIndex + nVertexIndex);
+			_pWriter->_param._pPointCloud->FillOsgPoint(point,
+														_pWriter->_param._nBeginIndex +
+															nVertexIndex);
 		}
 		// 单木分割，提前设置点类型
 		if (_pWriter->_param._eSegment == eTreeIndividual)
@@ -128,7 +155,9 @@ void CPointReadWriterVisitor::ReadWriteNoBound(osg::ref_ptr<osg::Vec3Array>& ver
 			size_t nVertArraySize = vertArray->size();
 			for (size_t nVertexIndex = 0; nVertexIndex < nVertArraySize; ++nVertexIndex)
 			{
-				SetPointCloudIndividualClass(pTexCoordArray, nVertexIndex, _pWriter->_param._nBeginIndex + nVertexIndex);
+				SetPointCloudIndividualClass(pTexCoordArray,
+											 nVertexIndex,
+											 _pWriter->_param._nBeginIndex + nVertexIndex);
 			}
 		}
 	}
@@ -142,10 +171,16 @@ void CPointReadWriterVisitor::ReadWriteNoBound(osg::ref_ptr<osg::Vec3Array>& ver
 			switch (_pWriter->_param._eSegment)
 			{
 			case eAutoSegment:
-				WriteSetSegment(screenPoint, pTexCoordArray, nVertexIndex, _pWriter->_param._nBeginIndex + nVertexIndex);
+				WriteSetSegment(screenPoint,
+								pTexCoordArray,
+								nVertexIndex,
+								_pWriter->_param._nBeginIndex + nVertexIndex);
 				break;
 			case eTreeIndividual:
-				WriteTreeIndividual(point, pTexCoordArray, nVertexIndex, _pWriter->_param._nBeginIndex + nVertexIndex);
+				WriteTreeIndividual(point,
+									pTexCoordArray,
+									nVertexIndex,
+									_pWriter->_param._nBeginIndex + nVertexIndex);
 				break;
 			default:
 				break;
@@ -157,11 +192,13 @@ void CPointReadWriterVisitor::ReadWriteNoBound(osg::ref_ptr<osg::Vec3Array>& ver
 
 void CPointReadWriterVisitor::apply(osg::Geometry& geometry)
 {
-	osg::ref_ptr<osg::Vec3Array> vertArray = static_cast<osg::Vec3Array*>(geometry.getVertexArray());
+	osg::ref_ptr<osg::Vec3Array> vertArray =
+		static_cast<osg::Vec3Array*>(geometry.getVertexArray());
 	if (!vertArray.valid())
 		return;
-	osg::ref_ptr<osg::Vec2Array> pTexCoordArray = static_cast<osg::Vec2Array*>(geometry.getTexCoordArray(0));
-	
+	osg::ref_ptr<osg::Vec2Array> pTexCoordArray =
+		static_cast<osg::Vec2Array*>(geometry.getTexCoordArray(0));
+
 	osg::Matrix matrix = osg::computeLocalToWorld(getNodePath());
 	if (_pWriter->_bBound)
 	{
@@ -171,21 +208,24 @@ void CPointReadWriterVisitor::apply(osg::Geometry& geometry)
 			auto point = (*vertArray)[i] * matrix;
 			if (_pWriter->_boundBox.IsInBound(point.x(), point.y()))
 			{
-				ReadWriteByBound(point, pTexCoordArray, _pWriter->_param._boundBox.center(),i);
+				ReadWriteByBound(point, pTexCoordArray, _pWriter->_param._boundBox.center(), i);
 				++_pWriter->_nEndIndex;
 			}
 		}
 	}
 	else
 	{
-		ReadWriteNoBound(vertArray, matrix, _pWriter->_param._boundBox.center(),pTexCoordArray);
+		ReadWriteNoBound(vertArray, matrix, _pWriter->_param._boundBox.center(), pTexCoordArray);
 	}
-	
 }
 
-void CPointReadWriterVisitor::ReadWriteByBound(osg::Vec3& point, osg::ref_ptr<osg::Vec2Array> pTexCoordArray, const osg::Vec3d& boxCenter ,size_t i)
+void CPointReadWriterVisitor::ReadWriteByBound(osg::Vec3& point,
+											   osg::ref_ptr<osg::Vec2Array> pTexCoordArray,
+											   const osg::Vec3d& boxCenter,
+											   size_t i)
 {
-	if (nullptr == pTexCoordArray || nullptr == _pWriter || nullptr == _pWriter->_param._pPointCloud)
+	if (nullptr == pTexCoordArray || nullptr == _pWriter ||
+		nullptr == _pWriter->_param._pPointCloud)
 		return;
 
 	if (_bReadWrite)
@@ -214,24 +254,29 @@ void CPointReadWriterVisitor::ReadWriteByBound(osg::Vec3& point, osg::ref_ptr<os
 	}
 }
 
-void CPointReadWriterVisitor::CreateCluster(osg::ref_ptr<osg::Vec2Array> pTexCoordArray, size_t nVertexIndex, unsigned treeId, const osg::Vec3& point)
+void CPointReadWriterVisitor::CreateCluster(osg::ref_ptr<osg::Vec2Array> pTexCoordArray,
+											size_t nVertexIndex,
+											unsigned treeId,
+											const osg::Vec3& point)
 {
 	//// 获取Page节点
-	//CPointCloudpagedLod* pPage = _pWriter->_param._pagedLod;
-	//if (nullptr == pPage || nullptr == _pClusterManager)
+	// CPointCloudpagedLod* pPage = _pWriter->_param._pagedLod;
+	// if (nullptr == pPage || nullptr == _pClusterManager)
 	//	return;
 
 	//// 移除点所属旧簇
-	//int nClusterID = -1;
-	//CPointCloudPropertyTool::GetClusterProperty(pTexCoordArray, nVertexIndex, nClusterID);
+	// int nClusterID = -1;
+	// CPointCloudPropertyTool::GetClusterProperty(pTexCoordArray, nVertexIndex, nClusterID);
 
-	//d3s::share_ptr<CClusterItem> pOldClusterItem = _pClusterManager->FindClusterByID(nClusterID);
-	//d3s::share_ptr<CClusterItem> pClusterItem = nullptr;
-	//if (_pWriter->_param._pTreeClusterMap->_treeClusterMap.end() != _pWriter->_param._pTreeClusterMap->_treeClusterMap.find(treeId))
+	// d3s::share_ptr<CClusterItem> pOldClusterItem = _pClusterManager->FindClusterByID(nClusterID);
+	// d3s::share_ptr<CClusterItem> pClusterItem = nullptr;
+	// if (_pWriter->_param._pTreeClusterMap->_treeClusterMap.end() !=
+	// _pWriter->_param._pTreeClusterMap->_treeClusterMap.find(treeId))
 	//{
 	//	pClusterItem = _pWriter->_param._pTreeClusterMap->_treeClusterMap[treeId];
-	//	CPointCloudPropertyTool::SetClusterProperty(pTexCoordArray, nVertexIndex, pClusterItem->GetId());
-	//}
+	//	CPointCloudPropertyTool::SetClusterProperty(pTexCoordArray, nVertexIndex,
+	// pClusterItem->GetId());
+	// }
 
 	//{
 	//	toolkit::CCriticalSectionSync cs(_pWriter->_param._pClusterBoxMap->_CSC);
@@ -248,7 +293,8 @@ void CPointReadWriterVisitor::CreateCluster(osg::ref_ptr<osg::Vec2Array> pTexCoo
 	//		CPointCloudPropertyTool::GetSegmentProperty(pTexCoordArray, nVertexIndex, nType);
 	//		pClusterItem = _pClusterManager->CreateCluster(nType, true);
 	//		_pWriter->_param._pTreeClusterMap->_treeClusterMap[treeId] = pClusterItem;
-	//		CPointCloudPropertyTool::SetClusterProperty(pTexCoordArray, nVertexIndex, pClusterItem->GetId());
+	//		CPointCloudPropertyTool::SetClusterProperty(pTexCoordArray, nVertexIndex,
+	// pClusterItem->GetId());
 	//	}
 	//	pClusterItem->AddPagedLodID(pPage->GetIDKey());
 	//	_pWriter->_param._pClusterBoxMap->_clusterBoxMap[pClusterItem->GetId()].expandBy(point);
@@ -257,17 +303,20 @@ void CPointReadWriterVisitor::CreateCluster(osg::ref_ptr<osg::Vec2Array> pTexCoo
 
 void CPointReadWriterVisitor::SetPolygonParam()
 {
-	if (nullptr != _pWriter && (!_pWriter->_vecSelectPoints.empty() || _pWriter->_boundingBox.valid()))
+	if (nullptr != _pWriter &&
+		(!_pWriter->_vecSelectPoints.empty() || _pWriter->_boundingBox.valid()))
 		_bPolygon = true;
 }
 
- CPointReadWriter::CPointReadWriter(const SPointReadWriterParam& param)
-	 :_nEndIndex(param._nBeginIndex), _bBound(false), _boundBox(pc::data::PointCloudBoundBox2D()), _param(param)
+
+CPointReadWriter::CPointReadWriter(const SPointReadWriterParam& param)
+	: _nEndIndex(param._nBeginIndex), _bBound(false), _boundBox(dummyBox), _param(param)
 {
 }
 
- CPointReadWriter::CPointReadWriter(const SPointReadWriterParam& param, const pc::data::PointCloudBoundBox2D& boundBox)
-	 : _nEndIndex(param._nBeginIndex), _bBound(true), _boundBox(boundBox), _param(param)
+CPointReadWriter::CPointReadWriter(const SPointReadWriterParam& param,
+								   const pc::data::PointCloudBoundBox2D& boundBox)
+	: _nEndIndex(param._nBeginIndex), _bBound(true), _boundBox(boundBox), _param(param)
 {
 }
 
@@ -275,14 +324,15 @@ void CPointReadWriter::Read()
 {
 	if (nullptr == _param._pLodNode)
 		return;
-	pc::data::tagPagedLodFile strModelPath = CPCQueryWrapperToolkit::GetPagedLodModelPath(_param._pLodNode);
-	std::string sPointInfoFileName =  CStringToolkit::CStringToUTF8(strModelPath.strPointInfoFile);
-	std::string sPointTexFileName = CStringToolkit::CStringToUTF8(strModelPath.strPointTexFile); 
+	pc::data::tagPagedLodFile strModelPath =
+		CPCQueryWrapperToolkit::GetPagedLodModelPath(_param._pLodNode);
+	std::string sPointInfoFileName = CStringToolkit::CStringToUTF8(strModelPath.strPointInfoFile);
+	std::string sPointTexFileName = CStringToolkit::CStringToUTF8(strModelPath.strPointTexFile);
 	_pNode = CPointCloudToolkit::ReadNode(sPointInfoFileName, sPointTexFileName);
 
 	if (!_pNode.valid())
 	{
-		//d3s::CLog::Error(L"读取 （%s） 文件节点为空!", strModelPath.strPointInfoFile);
+		// d3s::CLog::Error(L"读取 （%s） 文件节点为空!", strModelPath.strPointInfoFile);
 		return;
 	}
 
@@ -296,14 +346,15 @@ void CPointReadWriter::Write()
 	if (pPointCloudPagedLod.IsNull())
 		return;
 
-	pc::data::tagPagedLodFile strModelPath = CPCQueryWrapperToolkit::GetPagedLodModelPath(_param._pLodNode);
+	pc::data::tagPagedLodFile strModelPath =
+		CPCQueryWrapperToolkit::GetPagedLodModelPath(_param._pLodNode);
 	std::string sPointInfoFileName = CStringToolkit::CStringToUTF8(strModelPath.strPointInfoFile);
 	std::string sPointTexFileName = CStringToolkit::CStringToUTF8(strModelPath.strPointTexFile);
 	_pNode = CPointCloudToolkit::ReadNode(sPointInfoFileName, sPointTexFileName);
 
 	if (!_pNode.valid())
 	{
-		//d3s::CLog::Error(L"读取 （%s） 文件节点为空!", sPointInfoFileName);
+		// d3s::CLog::Error(L"读取 （%s） 文件节点为空!", sPointInfoFileName);
 		return;
 	}
 
@@ -312,12 +363,14 @@ void CPointReadWriter::Write()
 	_pNode->accept(filter);
 
 	// 写第零层级文件
-	const string sTexFileName = CStringToolkit::CStringToUTF8(strModelPath.strPointInfoFile);
+	const std::string sTexFileName = CStringToolkit::CStringToUTF8(strModelPath.strPointInfoFile);
 	if (!CPointCloudToolkit::WriteNode(_pNode, sTexFileName, CPointCloudToolkit::eTexCoord))
 		return;
 }
 
-void CPointReadWriter::SetPolygonParam(const std::vector<osg::Vec3d>& vecSelectPonits, const osg::BoundingBox& boundingBox, const osg::Matrix& vpwMatrix)
+void CPointReadWriter::SetPolygonParam(const std::vector<osg::Vec3d>& vecSelectPonits,
+									   const osg::BoundingBox& boundingBox,
+									   const osg::Matrix& vpwMatrix)
 {
 	_vecSelectPoints = vecSelectPonits;
 	_vpwMatrix = vpwMatrix;

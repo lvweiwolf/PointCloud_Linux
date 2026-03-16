@@ -1,9 +1,10 @@
+#include <Segment/PointCloudBoxQuery.h>
+#include <Segment/PCQueryWrapperToolkit.h>
+#include <Segment/PagedLodPointsVisitor.h>
 
-#include "PointCloudBoxQuery.h"
+#include <BusinessNode/BnsPointCloudNode.h>
 
-#include "../BusinessNode/BnsPointCloudNode.h"
-#include "PCQueryWrapperToolkit.h"
-#include "PagedLodPointsVisitor.h"
+#include <Tool/FileToolkit.h>
 
 // 过滤点云线程
 typedef std::vector<CPointReadWriter*> CFilterPointThreadVec;	// 点云过滤线程容器

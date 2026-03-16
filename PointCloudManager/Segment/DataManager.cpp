@@ -1,10 +1,14 @@
-#include "../stdafx.h"
-#include "DataManager.h"
+#include <Segment/DataManager.h>
+
+#include <include/cstring.h>
+
+#include <Tool/LibToolkit.h>
+#include <Tool/XmlDocument.h>
 
 // 属性名（Type）
-const	CString			STRING_TYPE_INDEX = L"Type";
+const CString STRING_TYPE_INDEX = L"Type";
 // 属性名（Type）
-const	CString			STRING_SEG_TYPE_INDEX = L"SegType";
+const CString STRING_SEG_TYPE_INDEX = L"SegType";
 
 
 CString GetTypeConvertFile()
@@ -13,15 +17,9 @@ CString GetTypeConvertFile()
 	return strPath;
 }
 
-CDataManager::CDataManager()
-{
+CDataManager::CDataManager() {}
 
-}
-
-CDataManager::~CDataManager()
-{
-
-}
+CDataManager::~CDataManager() {}
 
 std::map<int, int> CDataManager::GetTypeConvertInfo()
 {
@@ -51,7 +49,7 @@ std::map<int, int> CDataManager::GetTypeConvertInfo()
 	for (int i = 0; i < nCount; ++i)
 	{
 		pElement = pElements->GetAt(i);
-		
+
 		if (!pElement->FindAttribute(STRING_SEG_TYPE_INDEX, nPropIndex) ||
 			!pElement->FindAttribute(STRING_TYPE_INDEX, nPropIndex))
 			continue;
