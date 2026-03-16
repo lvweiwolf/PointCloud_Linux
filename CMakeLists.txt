@@ -51,6 +51,7 @@ endif()
 
 add_subdirectory(CommonTools)
 add_subdirectory(PointCloudSegmentation)
+add_subdirectory(PointCloudManager)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 

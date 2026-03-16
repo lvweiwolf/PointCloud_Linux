@@ -16,10 +16,8 @@ add_library(CommonTools SHARED
 
 apply_compiler_config(CommonTools)
 
-target_compile_definitions(CommonTools PUBLIC 
+target_compile_definitions(CommonTools PRIVATE 
 	COMMONTOOLSAPI 
-	_USE_MATH_DEFINES 
-	GOOGLE_GLOG_DLL_DECL
 )
 
 # 头文件引用
