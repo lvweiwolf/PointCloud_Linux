@@ -1,6 +1,7 @@
-//stdafx.h
-#include "Options.h"
-#include "../utils/logging.h"
+#include <src/service/Options.h>
+
+#include <src/utils/logging.h>
+
 namespace d3s {
 	namespace pcs {
 
@@ -8,7 +9,7 @@ namespace d3s {
 
 		COptions::~COptions() {}
 
-		void COptions::Set(const char* pszName, float fVal) 
+		void COptions::Set(const char* pszName, float fVal)
 		{
 			CHECK(pszName);
 			_values.put(pszName, fVal);
@@ -20,7 +21,7 @@ namespace d3s {
 			_values.put(pszName, dVal);
 		}
 
-		void COptions::Set(const char* pszName, int iVal) 
+		void COptions::Set(const char* pszName, int iVal)
 		{
 			CHECK(pszName);
 			_values.put(pszName, iVal);
@@ -38,7 +39,7 @@ namespace d3s {
 			_values.put(pszName, bVal);
 		}
 
-		void COptions::Set(const char* pszName, char* pBuffer) 
+		void COptions::Set(const char* pszName, char* pBuffer)
 		{
 			CHECK(pszName);
 			_buffer_map[std::string(pszName)] = pBuffer;
@@ -50,7 +51,8 @@ namespace d3s {
 
 			float value = 0.f;
 
-			try {
+			try
+			{
 
 				value = _values.get<float>(pszName);
 			}
@@ -72,7 +74,7 @@ namespace d3s {
 			{
 				value = _values.get<double>(pszName);
 			}
-			catch (std::exception &e)
+			catch (std::exception& e)
 			{
 				PCS_ERROR(e.what());
 			}
@@ -133,7 +135,7 @@ namespace d3s {
 			return value;
 		}
 
-		void* COptions::GetData(const char* pszName) const 
+		void* COptions::GetData(const char* pszName) const
 		{
 			CHECK(pszName);
 			std::string name(pszName);

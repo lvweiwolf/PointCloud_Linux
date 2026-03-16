@@ -6,11 +6,12 @@
 // 修改描述：
 // 文件版权：江西博微新技术有限公司
 //////////////////////////////////////////////////////////////////////
-#pragma once
+#ifndef STRINGUTIL_H_
+#define STRINGUTIL_H_
 
-#include <string>
-#include <stdio.h>
 #include <vector>
+#include <string>
+
 namespace d3s {
 	namespace pcs {
 
@@ -108,3 +109,5 @@ namespace d3s {
 		std::string ToUTF8(const std::string& str);
 	}
 }
+
+#endif // STRINGUTIL_H_

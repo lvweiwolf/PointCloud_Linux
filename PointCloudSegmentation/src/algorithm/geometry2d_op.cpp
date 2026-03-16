@@ -15,12 +15,13 @@
 
 
 typedef CGAL::Exact_predicates_exact_constructions_kernel Kernel;
-typedef CGAL::Gps_circle_segment_traits_2<Kernel> Traits_2;
-typedef CGAL::Polygon_2<Kernel> Polygon_2;
 typedef Kernel::Point_2 Point_2;
 typedef Kernel::Segment_2 Segment_2;
 typedef Kernel::Circle_2 Circle_2;
 typedef Kernel::Iso_rectangle_2 Rectangle_2;
+typedef CGAL::Gps_circle_segment_traits_2<Kernel> Traits_2;
+
+typedef CGAL::Polygon_2<Kernel> Polygon_2;
 
 namespace d3s {
 	namespace pcs {

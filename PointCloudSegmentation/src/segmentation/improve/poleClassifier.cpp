@@ -1,18 +1,13 @@
-//stdafx.h
-#include "poleClassifier.h"
-
-#include "../../core/private/statistics.h"
-#include "../../core/api.h"
-#include "../../core/private/cloudProcess.h"
-
-#include "../../plot/plotHandle.h"
-
-#include "../../algorithm/math.h"
-#include "../../algorithm/geometry2d_op.h"
-
-#include "../../segmentation/gridCell.h"
-#include "../../segmentation/pylonCommon.h"
-#include "../../utils/logging.h"
+#include <src/segmentation/improve/poleClassifier.h>
+#include <src/segmentation/gridCell.h>
+#include <src/segmentation/pylonCommon.h>
+#include <src/algorithm/math.h>
+#include <src/algorithm/geometry2d_op.h>
+#include <src/core/api.h>
+#include <src/core/private/statistics.h>
+#include <src/core/private/cloudProcess.h>
+#include <src/plot/plotHandle.h>
+#include <src/utils/logging.h>
 
 
 // #define RENDER_POSITIONS
@@ -95,8 +90,6 @@ namespace d3s {
 
 				poleIndices.insert(poleIndices.end(), headIndices.begin(), headIndices.end());
 				setClassification(ePylon, poleIndices, *_input);
-
-
 			}
 		}
 
@@ -205,7 +198,6 @@ namespace d3s {
 							   input,
 							   osg::Vec4(1.f, 1.f, 0.f, 1.f));
 #endif
-
 			}
 
 			return poleAxes;

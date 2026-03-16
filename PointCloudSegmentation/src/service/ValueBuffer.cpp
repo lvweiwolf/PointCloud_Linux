@@ -1,8 +1,7 @@
-//stdafx.h
-#include "ValueBuffer.h"
+#include <src/service/ValueBuffer.h>
+#include <src/core/private/gdalProcess.h>
+#include <src/utils/logging.h>
 
-#include "../core/private/gdalProcess.h"
-#include "../utils/logging.h"
 namespace d3s {
 	namespace pcs {
 
@@ -55,18 +54,18 @@ namespace d3s {
 			return readRoadDataset2(filename, _roadDS, _epsg);
 		}
 
-		void CRoadVectorizeBuffer::WriteCompressFile(const std::string& filename) 
+		void CRoadVectorizeBuffer::WriteCompressFile(const std::string& filename)
 		{
 			writeRoadDataset(_roadDS, _epsg, filename);
 		}
 
-		void CRoadVectorizeBuffer::Clear() 
+		void CRoadVectorizeBuffer::Clear()
 		{
 			for (size_t i = 0; i < _roadDS.size(); ++i)
 			{
 				VectorLineString* road = _roadDS.at(i);
 
-				// Ïú»ÙÄÚ´æ
+				// é”€æ¯å†…å­˜
 				if (road)
 					delete road;
 			}

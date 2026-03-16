@@ -1,32 +1,33 @@
-//stdafx.h
-#include "Recognition.h"
+#include <src/service/Recognition.h>
+#include <src/utils/logging.h>
+#include <src/utils/misc.h>
+
 #include <osgDB/ReadFile>
-#include <algorithm>
 #include <osgDB/WriteFile>
+
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
+
 #include <ncnn/gpu.h>
-#include "../utils/logging.h"
-#include "../utils/misc.h"
+
+#include <algorithm>
+
 using namespace d3s::pcs;
-const double gl_dStepLenth = 100.0;	// tifÇĞ¸î±ÈÀı
-const size_t gl_nPolygonMinPtSize = 3;	// ¶à±ßĞÎ×îÉÙµã¸öÊı
+const double gl_dStepLenth = 100.0;	   // tifåˆ‡å‰²æ¯”ä¾‹
+const size_t gl_nPolygonMinPtSize = 3; // å¤šè¾¹å½¢æœ€å°‘ç‚¹ä¸ªæ•°
 typedef boost::geometry::model::point<double, 2, boost::geometry::cs::cartesian> point;
 typedef boost::geometry::model::polygon<point> polygon;
 
 
-CCropRecognition::CCropRecognition()
-{
-	_pRegionPts = nullptr;
-}
+CCropRecognition::CCropRecognition() { _pRegionPts = nullptr; }
 
 bool CCropRecognition::Recognition(IOptions* pOption)
 {
-	// ×¼±¸»ù±¾²ÎÊı
+	// å‡†å¤‡åŸºæœ¬å‚æ•°
 	if (!InitParam(pOption))
 		return false;
 
-	// ÇĞÆ¬Ê¶±ğ
+	// åˆ‡ç‰‡è¯†åˆ«
 	int nColTiffCnt = (_pDs->xmax - _pDs->xmin) / gl_dStepLenth + 1;
 	int nRowTiffCnt = (_pDs->ymax - _pDs->ymin) / gl_dStepLenth + 1;
 	int nBoxCount = 1;
@@ -52,9 +53,9 @@ bool CCropRecognition::Recognition(IOptions* pOption)
 	double dSrcX = fabs(_pDs->geotransform[1]);
 	double dSrcY = fabs(_pDs->geotransform[5]);
 	double dMaxSrc = std::max(dSrcX, dSrcY);
-	// ¼ò»¯¶à±ßĞÎ£¨¿¹¾â³İ£©
+	// ç®€åŒ–å¤šè¾¹å½¢ï¼ˆæŠ—é”¯é½¿ï¼‰
 	SimplifyPolygon(*_pRegionPts, dMaxSrc);
-	 // ºÏ²¢ÇøÓò£¨Ê¹ÓÃµØÀí×ø±êÓëÏñËØ±ÈÀı×÷ÎªÈİ²î£¬²¹³¥ÇĞÆ¬Ôì³ÉµÄÇøÓòÎó²î£©
+	// åˆå¹¶åŒºåŸŸï¼ˆä½¿ç”¨åœ°ç†åæ ‡ä¸åƒç´ æ¯”ä¾‹ä½œä¸ºå®¹å·®ï¼Œè¡¥å¿åˆ‡ç‰‡é€ æˆçš„åŒºåŸŸè¯¯å·®ï¼‰
 	MergeIntersectPolygon(*_pRegionPts, dMaxSrc);
 
 	closeDOMDataset(_pDs);
@@ -68,7 +69,7 @@ bool CCropRecognition::InitParam(IOptions* pOption)
 	int gpu_count = ncnn::get_gpu_count();
 	if (gpu_count <= 0)
 	{
-		PCS_ERROR("[unet_inference_ncnn] ÍÆÀíÊ§°Ü£¬Î´ÄÜ¼ì²âµ½GPUÉè±¸.");
+		PCS_ERROR("[unet_inference_ncnn] æ¨ç†å¤±è´¥ï¼Œæœªèƒ½æ£€æµ‹åˆ°GPUè®¾å¤‡.");
 		return false;
 	}
 	if (nullptr == pOption->GetData("regionPts"))
@@ -101,7 +102,7 @@ void CCropRecognition::RecognitionByRegion(const d3s::pcs::BoundingBox2D& region
 		return;
 	cv::Size img_size(img.cols, img.rows);
 
-	// Ô¤²âÊı¾İ¼°´¦Àí
+	// é¢„æµ‹æ•°æ®åŠå¤„ç†
 	pp_stdnet2_inference_ncnn(_ncnn_model, 512, img, score);
 	cv::Mat mask(score.rows, score.cols, CV_8UC1, cv::Scalar(0));
 	for (int r = 0; r < score.rows; ++r)
@@ -113,32 +114,31 @@ void CCropRecognition::RecognitionByRegion(const d3s::pcs::BoundingBox2D& region
 		}
 	}
 
-	// µ÷Õû´óĞ¡µ½Ô­Ê¼³ß´ç£¬½«Ê¶±ğÇøÓò»¹Ô­Ô­±¾ÑÕÉ«
+	// è°ƒæ•´å¤§å°åˆ°åŸå§‹å°ºå¯¸ï¼Œå°†è¯†åˆ«åŒºåŸŸè¿˜åŸåŸæœ¬é¢œè‰²
 	cv::resize(mask, mask, img_size, cv::INTER_NEAREST);
 
-	// ÂÖÀªÌáÈ¡(ÂÖÀªµØÇø²Î¿¼´úÂë)
+	// è½®å»“æå–(è½®å»“åœ°åŒºå‚è€ƒä»£ç )
 	std::vector<std::vector<cv::Point>> regionPts;
 	std::vector<cv::Vec4i> hierarchy;
-	cv::findContours(mask, regionPts, hierarchy
-		, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
+	cv::findContours(mask, regionPts, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
 
-	// ÏñËØ×ø±ê×ªÕæÊµ×ø±ê
+	// åƒç´ åæ ‡è½¬çœŸå®åæ ‡
 	std::vector<std::vector<osg::Vec3d>> realPts = Pixel2Real(regionBox, regionPts, img_size);
 	_pRegionPts->insert(_pRegionPts->end(), realPts.begin(), realPts.end());
 
-	//// ²âÊÔ´úÂë
-	//if (!regionPts.empty())
+	//// æµ‹è¯•ä»£ç 
+	// if (!regionPts.empty())
 	//{
-	//	// Ğ´ÈëRGBÍ¼Ïñ
+	//	// å†™å…¥RGBå›¾åƒ
 	//	std::string directory = _outFilePath + StringPrintf(R"(%d\)", nBoxCount);
 	//	CreateDirIfNotExists(directory);
-	//	cv::imwrite(directory + "Êµ¼ÊÍ¼Æ¬.png", img);
-	//	// Ğ´ÈëÇøÓò¿ÉÊÓÊ¶±ğÍ¼Ïñ£¨ÑéÖ¤ÊÇ·ñ´æÔÚÊ¶±ğÎïÖÖ£©
+	//	cv::imwrite(directory + "å®é™…å›¾ç‰‡.png", img);
+	//	// å†™å…¥åŒºåŸŸå¯è§†è¯†åˆ«å›¾åƒï¼ˆéªŒè¯æ˜¯å¦å­˜åœ¨è¯†åˆ«ç‰©ç§ï¼‰
 	//	std::string outMaskFile = _outFilePath + StringPrintf(R"(%d\)", nBoxCount)
-	//		+ "Ê¶±ğ»Ò¶ÈÍ¼" + "testout.png";
+	//		+ "è¯†åˆ«ç°åº¦å›¾" + "testout.png";
 	//	cv::imwrite(outMaskFile, mask);
-	//	osg::ref_ptr<osg::Image> image = osgDB::readImageFile(directory + "Êµ¼ÊÍ¼Æ¬.png");
-	//	// ÇøÓòÌáÈ¡Í¼Ïñ
+	//	osg::ref_ptr<osg::Image> image = osgDB::readImageFile(directory + "å®é™…å›¾ç‰‡.png");
+	//	// åŒºåŸŸæå–å›¾åƒ
 	//	for (size_t i = 0; i < realPts.size(); ++i)
 	//	{
 	//		d3s::pcs::BoundingBox2D box;
@@ -149,11 +149,11 @@ void CCropRecognition::RecognitionByRegion(const d3s::pcs::BoundingBox2D& region
 	//			cv::Mat img;
 	//			readDOMImage(_pDs, box, img);
 	//			std::string outMaskFile = _outFilePath + StringPrintf(R"(%d\)", nBoxCount)
-	//				+ StringPrintf(R"(Ê¶±ğÇøÓòÍ¼Æ¬%d.png)", i);
+	//				+ StringPrintf(R"(è¯†åˆ«åŒºåŸŸå›¾ç‰‡%d.png)", i);
 	//			cv::imwrite(outMaskFile, img);
 	//		}
 	//	}
-	//	// ÇøÓòÃè±ßÍ¼Ïñ
+	//	// åŒºåŸŸæè¾¹å›¾åƒ
 	//	if (nullptr != image)
 	//	{
 	//		cv::Point* pPrePt = nullptr;
@@ -188,14 +188,14 @@ void CCropRecognition::RecognitionByRegion(const d3s::pcs::BoundingBox2D& region
 	//							else if (dy >= image->t())
 	//								dy = image->t() - 1;
 
-	//							// image×ø±êÔ­µãÔÚ×óÏÂ½Ç
+	//							// imageåæ ‡åŸç‚¹åœ¨å·¦ä¸‹è§’
 	//							pts.push_back(osg::Vec2i(dx, dy));
 	//						}
 	//					}
 	//					for (auto iter : pts)
 	//					{
 	//						int nx = iter.x();
-	//						// image×ø±êÔ­µãÔÚ×óÏÂ½Ç
+	//						// imageåæ ‡åŸç‚¹åœ¨å·¦ä¸‹è§’
 	//						int ny = image->t() - iter.y();
 	//						if (nx < 0)
 	//							nx = 0;
@@ -212,7 +212,7 @@ void CCropRecognition::RecognitionByRegion(const d3s::pcs::BoundingBox2D& region
 	//			}
 	//			pPrePt = nullptr;
 	//		}
-	//		osgDB::writeImageFile(*image, directory + "ÇøÓòÃè±ßÍ¼Æ¬.png");
+	//		osgDB::writeImageFile(*image, directory + "åŒºåŸŸæè¾¹å›¾ç‰‡.png");
 	//	}
 	//}
 	++nBoxCount;
@@ -237,8 +237,10 @@ std::vector<cv::Point> random_sampling(const cv::Point pPrePt, const cv::Point& 
 	return pts;
 }
 
-std::vector<std::vector<osg::Vec3d>> CCropRecognition::Pixel2Real(const d3s::pcs::BoundingBox2D& regionBox
-	, const std::vector<std::vector<cv::Point>>& regionPts, const cv::Size& img_size)
+std::vector<std::vector<osg::Vec3d>> CCropRecognition::Pixel2Real(
+	const d3s::pcs::BoundingBox2D& regionBox,
+	const std::vector<std::vector<cv::Point>>& regionPts,
+	const cv::Size& img_size)
 {
 	std::vector<std::vector<osg::Vec3d>> regionPt;
 	if (!regionBox.valid() || regionPts.empty() || img_size.empty() || nullptr == _pRegionPts)
@@ -265,8 +267,8 @@ std::vector<std::vector<osg::Vec3d>> CCropRecognition::Pixel2Real(const d3s::pcs
 	return regionPt;
 }
 
-std::vector<osg::Vec3d> CCropRecognition::MergePolygons(const std::vector<osg::Vec3d>& polygon1
-	, const std::vector<osg::Vec3d>& polygon2)
+std::vector<osg::Vec3d> CCropRecognition::MergePolygons(const std::vector<osg::Vec3d>& polygon1,
+														const std::vector<osg::Vec3d>& polygon2)
 {
 	std::vector<osg::Vec3d> result;
 	if (polygon1.empty() || polygon2.empty())
@@ -279,7 +281,7 @@ std::vector<osg::Vec3d> CCropRecognition::MergePolygons(const std::vector<osg::V
 	for (auto iter : polygon2)
 		boostPolygonPts2.emplace_back(point(iter.x(), iter.y()));
 
-	// boost¿âºÏ²¢Ïà½»¶à±ßĞÎ
+	// booståº“åˆå¹¶ç›¸äº¤å¤šè¾¹å½¢
 	polygon boostPolygon1, boostPolygon2;
 	boost::geometry::append(boostPolygon1.outer(), boostPolygonPts1);
 	boost::geometry::append(boostPolygon2.outer(), boostPolygonPts2);
@@ -296,7 +298,8 @@ std::vector<osg::Vec3d> CCropRecognition::MergePolygons(const std::vector<osg::V
 	return result;
 }
 
-bool CCropRecognition::IntersectsPolygon(const std::vector<osg::Vec3d>& polygon1, const std::vector<osg::Vec3d>& polygon2)
+bool CCropRecognition::IntersectsPolygon(const std::vector<osg::Vec3d>& polygon1,
+										 const std::vector<osg::Vec3d>& polygon2)
 {
 	if (polygon1.empty() || polygon2.empty())
 		return false;
@@ -308,7 +311,7 @@ bool CCropRecognition::IntersectsPolygon(const std::vector<osg::Vec3d>& polygon1
 	for (auto iter : polygon2)
 		boostPolygonPts2.emplace_back(point(iter.x(), iter.y()));
 
-	// boost¿â¶à±ßĞÎÇó½»
+	// booståº“å¤šè¾¹å½¢æ±‚äº¤
 	polygon boostPolygon1, boostPolygon2;
 	boost::geometry::append(boostPolygon1.outer(), boostPolygonPts1);
 	boost::geometry::append(boostPolygon2.outer(), boostPolygonPts2);
@@ -317,13 +320,14 @@ bool CCropRecognition::IntersectsPolygon(const std::vector<osg::Vec3d>& polygon1
 	return boost::geometry::intersects(boostPolygon1, boostPolygon2);
 }
 
-void CCropRecognition::MergeIntersectPolygon(std::vector<std::vector<osg::Vec3d>>& polygons, double dEpsilon)
+void CCropRecognition::MergeIntersectPolygon(std::vector<std::vector<osg::Vec3d>>& polygons,
+											 double dEpsilon)
 {
-	// ¶à±ßĞÎ¸öÊıĞ¡ÓÚ2ÎŞÒâÒå
+	// å¤šè¾¹å½¢ä¸ªæ•°å°äº2æ— æ„ä¹‰
 	if (polygons.size() < 2)
 		return;
 
-	// ½«¶à±ßĞÎ·Å´ó
+	// å°†å¤šè¾¹å½¢æ”¾å¤§
 	for (auto& iter : polygons)
 	{
 		osg::BoundingBox box;
@@ -336,12 +340,12 @@ void CCropRecognition::MergeIntersectPolygon(std::vector<std::vector<osg::Vec3d>
 			dir.normalize();
 			pt = dir * dLength + box.center();
 		}
-		// ±ÕºÏ
+		// é—­åˆ
 		if (!iter.empty())
 			iter.push_back(iter.front());
 	}
 
-	// ÅĞ¶ÏÏà½»£¬Ïà½»ÔòºÏ²¢
+	// åˆ¤æ–­ç›¸äº¤ï¼Œç›¸äº¤åˆ™åˆå¹¶
 	for (size_t i = 0; i < polygons.size();)
 	{
 		bool bIntersect = false;
@@ -352,17 +356,17 @@ void CCropRecognition::MergeIntersectPolygon(std::vector<std::vector<osg::Vec3d>
 
 			polygons[i] = MergePolygons(polygons[i], polygons[j]);
 			bIntersect = true;
-			// ÒÑºÏ²¢£¬É¾³ıµ±Ç°¶à±ßĞÎ
+			// å·²åˆå¹¶ï¼Œåˆ é™¤å½“å‰å¤šè¾¹å½¢
 			polygons.erase(polygons.begin() + j);
 			break;
 		}
 
-		// Èç¹û´æÔÚÏà½»¶à±ßĞÎ£¬Ôòµ±Ç°¶à±ßĞÎ¼ÌĞøÃ°Åİ¶Ô±È
+		// å¦‚æœå­˜åœ¨ç›¸äº¤å¤šè¾¹å½¢ï¼Œåˆ™å½“å‰å¤šè¾¹å½¢ç»§ç»­å†’æ³¡å¯¹æ¯”
 		if (!bIntersect)
 			++i;
 	}
 
-	// »¹Ô­±»·Å´óºó¶à±ßĞÎ
+	// è¿˜åŸè¢«æ”¾å¤§åå¤šè¾¹å½¢
 	for (size_t i = 0; i < polygons.size(); ++i)
 	{
 		osg::BoundingBox box;
@@ -378,7 +382,8 @@ void CCropRecognition::MergeIntersectPolygon(std::vector<std::vector<osg::Vec3d>
 	}
 }
 
-void CCropRecognition::SimplifyPolygon(std::vector<std::vector<osg::Vec3d>>& polygons, double dEpsilon)
+void CCropRecognition::SimplifyPolygon(std::vector<std::vector<osg::Vec3d>>& polygons,
+									   double dEpsilon)
 {
 	for (auto& polygon : polygons)
 	{

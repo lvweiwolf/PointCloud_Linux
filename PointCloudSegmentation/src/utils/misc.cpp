@@ -1,25 +1,29 @@
-//stdafx.h
-#include "misc.h"
-#include "stringutil.h"
-#include <iostream>
+#include <src/utils/misc.h>
+#include <src/utils/stringutil.h>
+#include <src/utils/logging.h>
+
 #include <sys/stat.h>
 #include <unistd.h>
 #include <dirent.h>
+
+#include <iostream>
 #include <fstream>
 #include <cstring>
-#include "logging.h"
 
 namespace d3s {
 	namespace pcs {
 
 		std::string EnsureTrailingSlash(const std::string& str)
 		{
-			if (str.length() > 0) {
-				if (str.back() != '/') {
+			if (str.length() > 0)
+			{
+				if (str.back() != '/')
+				{
 					return str + "/";
 				}
 			}
-			else {
+			else
+			{
 				return str + "/";
 			}
 			return str;
@@ -33,7 +37,9 @@ namespace d3s {
 			std::string ext_lower = ext;
 			StringToLower(&ext_lower);
 			if (file_name.size() >= ext_lower.size() &&
-				file_name.substr(file_name.size() - ext_lower.size(), ext_lower.size()) == ext_lower) {
+				file_name.substr(file_name.size() - ext_lower.size(), ext_lower.size()) ==
+					ext_lower)
+			{
 				return true;
 			}
 			return false;
@@ -42,29 +48,32 @@ namespace d3s {
 		void SplitFileExtension(const std::string& path, std::string* root, std::string* ext)
 		{
 			const auto parts = StringSplit(path, ".");
-			CHECK(parts.size() >  0);
-			if (parts.size() == 1) {
+			CHECK(parts.size() > 0);
+			if (parts.size() == 1)
+			{
 				*root = parts[0];
 				*ext = "";
 			}
-			else {
+			else
+			{
 				*root = "";
-				for (size_t i = 0; i < parts.size() - 1; ++i) {
+				for (size_t i = 0; i < parts.size() - 1; ++i)
+				{
 					*root += parts[i] + ".";
 				}
 				*root = root->substr(0, root->length() - 1);
-				if (parts.back() == "") {
+				if (parts.back() == "")
+				{
 					*ext = "";
 				}
-				else {
+				else
+				{
 					*ext = "." + parts.back();
 				}
 			}
 		}
 
-		void FileCopy(const std::string& src_path,
-			const std::string& dst_path,
-			CopyType type)
+		void FileCopy(const std::string& src_path, const std::string& dst_path, CopyType type)
 		{
 			switch (type)
 			{
@@ -76,36 +85,42 @@ namespace d3s {
 				break;
 			}
 			case CopyType::HARD_LINK:
-				if (link(src_path.c_str(), dst_path.c_str()) != 0) {
+				if (link(src_path.c_str(), dst_path.c_str()) != 0)
+				{
 					// handle error
 				}
 				break;
 			case CopyType::SOFT_LINK:
-				if (symlink(src_path.c_str(), dst_path.c_str()) != 0) {
+				if (symlink(src_path.c_str(), dst_path.c_str()) != 0)
+				{
 					// handle error
 				}
 				break;
 			}
 		}
 
-		bool ExistsFile(const std::string& path) { 
+		bool ExistsFile(const std::string& path)
+		{
 			struct stat st;
 			return stat(path.c_str(), &st) == 0 && S_ISREG(st.st_mode);
 		}
 
-		bool ExistsDir(const std::string& path) { 
+		bool ExistsDir(const std::string& path)
+		{
 			struct stat st;
 			return stat(path.c_str(), &st) == 0 && S_ISDIR(st.st_mode);
 		}
 
-		bool ExistsPath(const std::string& path) { 
+		bool ExistsPath(const std::string& path)
+		{
 			struct stat st;
 			return stat(path.c_str(), &st) == 0;
 		}
 
 		void CreateDirIfNotExists(const std::string& path)
 		{
-			if (!ExistsDir(path)) {
+			if (!ExistsDir(path))
+			{
 				mkdir(path.c_str(), 0755);
 			}
 		}
@@ -117,14 +132,17 @@ namespace d3s {
 				// 递归创建目录
 				size_t pos = 0;
 				std::string dir;
-				while ((pos = path.find('/', pos)) != std::string::npos) {
+				while ((pos = path.find('/', pos)) != std::string::npos)
+				{
 					dir = path.substr(0, pos);
-					if (!dir.empty() && !ExistsDir(dir)) {
+					if (!dir.empty() && !ExistsDir(dir))
+					{
 						mkdir(dir.c_str(), 0755);
 					}
 					pos++;
 				}
-				if (!ExistsDir(path)) {
+				if (!ExistsDir(path))
+				{
 					mkdir(path.c_str(), 0755);
 				}
 			}
@@ -133,10 +151,12 @@ namespace d3s {
 		std::string GetPathBaseName(const std::string& path)
 		{
 			const std::vector<std::string> names = StringSplit(StringReplace(path, "\\", "/"), "/");
-			if (names.size() > 1 && names.back() == "") {
+			if (names.size() > 1 && names.back() == "")
+			{
 				return names[names.size() - 2];
 			}
-			else {
+			else
+			{
 				return names.back();
 			}
 		}
@@ -144,7 +164,8 @@ namespace d3s {
 		std::string GetParentDir(const std::string& path)
 		{
 			size_t pos = path.find_last_of('/');
-			if (pos != std::string::npos) {
+			if (pos != std::string::npos)
+			{
 				return path.substr(0, pos);
 			}
 			return "";
@@ -169,20 +190,23 @@ namespace d3s {
 
 			// Loop through both while they are the same to find nearest common directory
 			while (from_iter != from_path.end() && to_iter != to_path.end() &&
-				(*to_iter) == (*from_iter)) {
+				   (*to_iter) == (*from_iter))
+			{
 				++to_iter;
 				++from_iter;
 			}
 
 			// Replace from path segments with '..' (from => nearest common directory)
 			path rel_path;
-			while (from_iter != from_path.end()) {
+			while (from_iter != from_path.end())
+			{
 				rel_path /= "..";
 				++from_iter;
 			}
 
 			// Append the remainder of the to path (nearest common directory => to)
-			while (to_iter != to_path.end()) {
+			while (to_iter != to_path.end())
+			{
 				rel_path /= *to_iter;
 				++to_iter;
 			}
@@ -194,14 +218,18 @@ namespace d3s {
 		{
 			std::vector<std::string> file_list;
 			DIR* dir = opendir(path.c_str());
-			if (dir) {
+			if (dir)
+			{
 				struct dirent* entry;
-				while ((entry = readdir(dir)) != nullptr) {
+				while ((entry = readdir(dir)) != nullptr)
+				{
 					std::string filename = entry->d_name;
-					if (filename == "." || filename == "..") continue;
+					if (filename == "." || filename == "..")
+						continue;
 					std::string fullPath = path + "/" + filename;
 					struct stat st;
-					if (stat(fullPath.c_str(), &st) == 0 && S_ISREG(st.st_mode)) {
+					if (stat(fullPath.c_str(), &st) == 0 && S_ISREG(st.st_mode))
+					{
 						file_list.push_back(fullPath);
 					}
 				}
@@ -215,17 +243,24 @@ namespace d3s {
 			std::vector<std::string> file_list;
 			// 简单实现，非递归
 			DIR* dir = opendir(path.c_str());
-			if (dir) {
+			if (dir)
+			{
 				struct dirent* entry;
-				while ((entry = readdir(dir)) != nullptr) {
+				while ((entry = readdir(dir)) != nullptr)
+				{
 					std::string filename = entry->d_name;
-					if (filename == "." || filename == "..") continue;
+					if (filename == "." || filename == "..")
+						continue;
 					std::string fullPath = path + "/" + filename;
 					struct stat st;
-					if (stat(fullPath.c_str(), &st) == 0) {
-						if (S_ISREG(st.st_mode)) {
+					if (stat(fullPath.c_str(), &st) == 0)
+					{
+						if (S_ISREG(st.st_mode))
+						{
 							file_list.push_back(fullPath);
-						} else if (S_ISDIR(st.st_mode)) {
+						}
+						else if (S_ISDIR(st.st_mode))
+						{
 							// 递归，但为了简单，暂时不实现
 						}
 					}
@@ -239,9 +274,11 @@ namespace d3s {
 		{
 			std::vector<std::string> dir_list;
 			for (auto it = boost::filesystem::directory_iterator(path);
-				it != boost::filesystem::directory_iterator();
-				++it) {
-				if (boost::filesystem::is_directory(*it)) {
+				 it != boost::filesystem::directory_iterator();
+				 ++it)
+			{
+				if (boost::filesystem::is_directory(*it))
+				{
 					const boost::filesystem::path dir_path = *it;
 					dir_list.push_back(dir_path.string());
 				}
@@ -253,9 +290,11 @@ namespace d3s {
 		{
 			std::vector<std::string> dir_list;
 			for (auto it = boost::filesystem::recursive_directory_iterator(path);
-				it != boost::filesystem::recursive_directory_iterator();
-				++it) {
-				if (boost::filesystem::is_directory(*it)) {
+				 it != boost::filesystem::recursive_directory_iterator();
+				 ++it)
+			{
+				if (boost::filesystem::is_directory(*it))
+				{
 					const boost::filesystem::path dir_path = *it;
 					dir_list.push_back(dir_path.string());
 				}
@@ -266,7 +305,7 @@ namespace d3s {
 		size_t GetFileSize(const std::string& path)
 		{
 			std::ifstream file(path, std::ifstream::ate | std::ifstream::binary);
-			CHECK_MSG(file.is_open(), path);
+			CHECK_MSG(file.is_open(), path.c_str());
 			return file.tellg();
 		}
 
@@ -289,9 +328,11 @@ namespace d3s {
 			auto elems = StringSplit(csv, ",;");
 			std::vector<std::string> values;
 			values.reserve(elems.size());
-			for (auto& elem : elems) {
+			for (auto& elem : elems)
+			{
 				StringTrim(&elem);
-				if (elem.empty()) {
+				if (elem.empty())
+				{
 					continue;
 				}
 				values.push_back(elem);
@@ -305,15 +346,19 @@ namespace d3s {
 			auto elems = StringSplit(csv, ",;");
 			std::vector<int> values;
 			values.reserve(elems.size());
-			for (auto& elem : elems) {
+			for (auto& elem : elems)
+			{
 				StringTrim(&elem);
-				if (elem.empty()) {
+				if (elem.empty())
+				{
 					continue;
 				}
-				try {
+				try
+				{
 					values.push_back(std::stoi(elem));
 				}
-				catch (const std::invalid_argument&) {
+				catch (const std::invalid_argument&)
+				{
 					return std::vector<int>(0);
 				}
 			}
@@ -326,15 +371,19 @@ namespace d3s {
 			auto elems = StringSplit(csv, ",;");
 			std::vector<float> values;
 			values.reserve(elems.size());
-			for (auto& elem : elems) {
+			for (auto& elem : elems)
+			{
 				StringTrim(&elem);
-				if (elem.empty()) {
+				if (elem.empty())
+				{
 					continue;
 				}
-				try {
+				try
+				{
 					values.push_back(std::stod(elem));
 				}
-				catch (const std::invalid_argument&) {
+				catch (const std::invalid_argument&)
+				{
 					return std::vector<float>(0);
 				}
 			}
@@ -347,15 +396,19 @@ namespace d3s {
 			auto elems = StringSplit(csv, ",;");
 			std::vector<double> values;
 			values.reserve(elems.size());
-			for (auto& elem : elems) {
+			for (auto& elem : elems)
+			{
 				StringTrim(&elem);
-				if (elem.empty()) {
+				if (elem.empty())
+				{
 					continue;
 				}
-				try {
+				try
+				{
 					values.push_back(std::stold(elem));
 				}
-				catch (const std::invalid_argument&) {
+				catch (const std::invalid_argument&)
+				{
 					return std::vector<double>(0);
 				}
 			}
@@ -365,14 +418,16 @@ namespace d3s {
 		std::vector<std::string> ReadTextFileLines(const std::string& path)
 		{
 			std::ifstream file(path);
-			CHECK_MSG(file.is_open(), path);
+			CHECK_MSG(file.is_open(), path.c_str());
 
 			std::string line;
 			std::vector<std::string> lines;
-			while (std::getline(file, line)) {
+			while (std::getline(file, line))
+			{
 				StringTrim(&line);
 
-				if (line.empty()) {
+				if (line.empty())
+				{
 					continue;
 				}
 
@@ -384,9 +439,12 @@ namespace d3s {
 
 		void RemoveCommandLineArgument(const std::string& arg, int* argc, char** argv)
 		{
-			for (int i = 0; i < *argc; ++i) {
-				if (argv[i] == arg) {
-					for (int j = i + 1; j < *argc; ++j) {
+			for (int i = 0; i < *argc; ++i)
+			{
+				if (argv[i] == arg)
+				{
+					for (int j = i + 1; j < *argc; ++j)
+					{
 						argv[i] = argv[j];
 					}
 					*argc -= 1;
@@ -406,7 +464,8 @@ namespace d3s {
 			else if (aBytes < (int64_t)1024 * 1024 * 1024 * 1024)
 				return StringPrintf("%.02fGB", (double)aBytes / (1024.0 * 1024.0 * 1024.0));
 			else
-				return StringPrintf("%.02fTB", (double)aBytes / (1024.0 * 1024.0 * 1024.0 * 1024.0));
+				return StringPrintf("%.02fTB",
+									(double)aBytes / (1024.0 * 1024.0 * 1024.0 * 1024.0));
 		}
 	}
 }

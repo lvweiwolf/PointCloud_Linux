@@ -6,12 +6,13 @@
 // 修改描述：
 // 文件版权：江西博微新技术有限公司
 //////////////////////////////////////////////////////////////////////
-#pragma once
+#ifndef ATTACHMENT_CLASSIFIER_H_
+#define ATTACHMENT_CLASSIFIER_H_
+
+#include <src/segmentation/gridCell.h>
+#include <src/segmentation/powerlineCurve.h>
 
 #include <set>
-
-#include "../../segmentation/gridCell.h"
-#include "../../segmentation/powerlineCurve.h"
 
 namespace d3s {
 	namespace pcs {
@@ -466,3 +467,5 @@ namespace d3s {
 							  PylonGrid3D& grid);
 	}
 }
+
+#endif // ATTACHMENT_CLASSIFIER_H_

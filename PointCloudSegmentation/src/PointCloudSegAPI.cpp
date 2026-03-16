@@ -1,24 +1,26 @@
 #include <include/PointCloudSegAPI.h>
 
-//分类器
-#include "service/Segmentation.h"
-//分类参数配置
-#include "service/Options.h"
-//log信息
-#include "utils/logging.h"
-//文件存在工具
-#include "utils/misc.h"
+// 分类器
+#include <src/service/Segmentation.h>
 
-#include "service/ValueBuffer.h"
+// 分类参数配置
+#include <src/service/Options.h>
 
-#include "service/GeoProjectionConvertor.h"
-#include "service/PointCloud.h"
-#include "service/Recognition.h"
+// log信息
+#include <src/utils/logging.h>
 
+// 文件存在工具
+#include <src/utils/misc.h>
+
+#include <src/service/ValueBuffer.h>
+#include <src/service/GeoProjectionConvertor.h>
+#include <src/service/PointCloud.h>
+#include <src/service/Recognition.h>
+
+#include <osg/ref_ptr>
 #include <osgViewer/Viewer>
 #include <osgGA/CameraManipulator>
 #include <osg/Group>
-#include <osg/ref_ptr>
 
 #include <boost/property_tree/ptree_fwd.hpp>
 #include <boost/property_tree/ini_parser.hpp>
@@ -38,7 +40,7 @@ osg::ref_ptr<osg::Group> staticModel = new osg::Group;
 namespace d3s {
 	namespace pcs {
 
-		ICloudSegmentation*  CreateSegmentation(d3s::pcs::SegmentationType eSegType)
+		ICloudSegmentation* CreateSegmentation(d3s::pcs::SegmentationType eSegType)
 		{
 			ICloudSegmentation* segmentation = nullptr;
 
@@ -62,7 +64,7 @@ namespace d3s {
 			case SegmentationType::CROPS:
 				segmentation = new CCropSegmentation();
 				break;
-			//case SegClassification::DANGER:
+			// case SegClassification::DANGER:
 			//	segmentation = new d3s::pcs::CDangerSegmentation();
 			//	break;
 			default:
@@ -71,7 +73,7 @@ namespace d3s {
 			return segmentation;
 		}
 
-		IOptions*  CreateSegOption(const char* iniFile)
+		IOptions* CreateSegOption(const char* iniFile)
 		{
 			IOptions* options = new d3s::pcs::COptions();
 
@@ -80,7 +82,7 @@ namespace d3s {
 				std::string path = iniFile;
 
 				boost::property_tree::ptree ini;
-				//这个位置如果没有读取到文件会崩溃,需要加异常处理
+				// 这个位置如果没有读取到文件会崩溃,需要加异常处理
 				boost::property_tree::ini_parser::read_ini(path, ini);
 				auto optionItems = ini.get_child("Options");
 
@@ -104,42 +106,24 @@ namespace d3s {
 			return options;
 		}
 
-		IGeoProjectionConvertor*  CreateGeoProjectionConvertor(int epsg)
+		IGeoProjectionConvertor* CreateGeoProjectionConvertor(int epsg)
 		{
 			return new CGeoProjectionConvertor(epsg);
 		}
 
-		ICloudDetection*  CreateaPylonDetection()
-		{
-			return new CPylonDetection();
-		}
+		ICloudDetection* CreateaPylonDetection() { return new CPylonDetection(); }
 
-		ICloudReconstrct*  CreatePylonReconstruct()
-		{
-			return new CPylonReconstruct();
-		}
+		ICloudReconstrct* CreatePylonReconstruct() { return new CPylonReconstruct(); }
 
-		ICloudCurveFitting*  CreatePowerlineFitting()
-		{
-			return new CPowerlineCurveFitting();
-		}
+		ICloudCurveFitting* CreatePowerlineFitting() { return new CPowerlineCurveFitting(); }
 
-		ICloudClustering*  CreateCloudClustering()
-		{
-			return new CCloudClusteringImpl();
-		}
+		ICloudClustering* CreateCloudClustering() { return new CCloudClusteringImpl(); }
 
-		ICloudRasterize*  CreateCloudRasterize()
-		{
-			return new CTiffRasterize();
-		}
+		ICloudRasterize* CreateCloudRasterize() { return new CTiffRasterize(); }
 
-		IPointCloud*  CreatePointCloud()
-		{
-			return new CPointCloud();
-		}
+		IPointCloud* CreatePointCloud() { return new CPointCloud(); }
 
-		IValueBuffer*  CreateRoadVectorize(const std::string& filename)
+		IValueBuffer* CreateRoadVectorize(const std::string& filename)
 		{
 			if (filename.empty())
 				return nullptr;
@@ -206,7 +190,8 @@ namespace d3s {
 			case d3s::pcs::RecognitionType::eCrop:
 			{
 				pRecognition = new CCropRecognition();
-			}break;
+			}
+			break;
 			default:
 				break;
 			}

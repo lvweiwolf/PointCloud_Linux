@@ -12,6 +12,10 @@ list(APPEND SOURCES ${INC_SRC}
 
 add_library(CommonTools ${SOURCES})
 apply_compiler_config(CommonTools)
+target_compile_definitions(CommonTools PUBLIC 
+	_USE_MATH_DEFINES 
+	GOOGLE_GLOG_DLL_DECL
+)
 
 # 头文件引用
 target_include_directories(CommonTools PUBLIC 

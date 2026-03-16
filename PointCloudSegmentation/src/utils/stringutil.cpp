@@ -1,12 +1,13 @@
-//stdafx.h
-#include "stringutil.h"
-#include <stdarg.h>
+#include <src/utils/stringutil.h>
+
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/split.hpp>
+
+#include <cstdarg>
 #include <codecvt>
 #include <stdexcept>
 #include <locale>
 #include <string>
-#include <boost/algorithm/string/classification.hpp>
-#include <boost/algorithm/string/split.hpp>
 
 #ifndef LPCWSTR
 typedef const wchar_t* LPCWSTR;
@@ -24,7 +25,7 @@ namespace d3s {
 
 			std::string UnicodeToANSI(const std::wstring& str)
 			{
-				#ifdef WIN32
+#ifdef WIN32
 				char* pElementText;
 				int iTextLen;
 				// 宽字节转多字节
@@ -48,29 +49,34 @@ namespace d3s {
 				pElementText = nullptr;
 				return strText;
 
-				#else
+#else
 
 
-				if (str.empty()) {
+				if (str.empty())
+				{
 					return "";
 				}
 
 				// 保存当前locale
-				std::unique_ptr<char, void(*)(char*)> old_locale(
-					std::setlocale(LC_ALL, nullptr),
-					[](char* p) { if (p) free(p); }
-				);
+				std::unique_ptr<char, void (*)(char*)> old_locale(std::setlocale(LC_ALL, nullptr),
+																  [](char* p) {
+																	  if (p)
+																		  free(p);
+																  });
 
 				// 设置locale为当前系统默认（模拟Windows的CP_ACP）
-				if (std::setlocale(LC_ALL, "") == nullptr) {
+				if (std::setlocale(LC_ALL, "") == nullptr)
+				{
 					throw std::runtime_error("Failed to set locale");
 				}
 
 				// 计算所需多字节字符数量
 				std::size_t mblen = std::wcstombs(nullptr, str.c_str(), 0);
-				if (mblen == static_cast<std::size_t>(-1)) {
+				if (mblen == static_cast<std::size_t>(-1))
+				{
 					// 恢复原来的locale
-					if (old_locale) {
+					if (old_locale)
+					{
 						std::setlocale(LC_ALL, old_locale.get());
 					}
 					return "";
@@ -81,26 +87,29 @@ namespace d3s {
 
 				// 执行转换
 				if (std::wcstombs(buffer.data(), str.c_str(), buffer.size()) ==
-					static_cast<std::size_t>(-1)) {
+					static_cast<std::size_t>(-1))
+				{
 					// 恢复原来的locale
-					if (old_locale) {
+					if (old_locale)
+					{
 						std::setlocale(LC_ALL, old_locale.get());
 					}
 					return "";
 				}
 
 				// 恢复原来的locale
-				if (old_locale) {
+				if (old_locale)
+				{
 					std::setlocale(LC_ALL, old_locale.get());
 				}
 
 				return std::string(buffer.data());
-				#endif
+#endif
 			}
 
 			std::wstring AnsiToUNICODE(const std::string& str)
 			{
-				#ifdef WIN32
+#ifdef WIN32
 				wchar_t* pElementText;
 				int iTextLen;
 				// 宽字节转多字节
@@ -115,23 +124,27 @@ namespace d3s {
 				delete[] pElementText;
 				pElementText = nullptr;
 				return strText;
-				#else
+#else
 				// 保存当前locale
-				std::unique_ptr<char, void(*)(char*)> old_locale(
-					std::setlocale(LC_ALL, nullptr),
-					[](char* p) { if (p) free(p); }
-				);
+				std::unique_ptr<char, void (*)(char*)> old_locale(std::setlocale(LC_ALL, nullptr),
+																  [](char* p) {
+																	  if (p)
+																		  free(p);
+																  });
 
 				// 设置locale为当前系统默认（模拟Windows的CP_ACP）
-				if (std::setlocale(LC_ALL, "") == nullptr) {
+				if (std::setlocale(LC_ALL, "") == nullptr)
+				{
 					throw std::runtime_error("Failed to set locale");
 				}
 
 				// 计算所需宽字符数量
 				std::size_t wlen = std::mbstowcs(nullptr, str.c_str(), 0);
-				if (wlen == static_cast<std::size_t>(-1)) {
+				if (wlen == static_cast<std::size_t>(-1))
+				{
 					// 恢复原来的locale
-					if (old_locale) {
+					if (old_locale)
+					{
 						std::setlocale(LC_ALL, old_locale.get());
 					}
 					return L"";
@@ -142,26 +155,29 @@ namespace d3s {
 
 				// 执行转换
 				if (std::mbstowcs(buffer.data(), str.c_str(), buffer.size()) ==
-					static_cast<std::size_t>(-1)) {
+					static_cast<std::size_t>(-1))
+				{
 					// 恢复原来的locale
-					if (old_locale) {
+					if (old_locale)
+					{
 						std::setlocale(LC_ALL, old_locale.get());
 					}
 					return L"";
 				}
 
 				// 恢复原来的locale
-				if (old_locale) {
+				if (old_locale)
+				{
 					std::setlocale(LC_ALL, old_locale.get());
 				}
 
 				return std::wstring(buffer.data());
-				#endif // WIN32
+#endif // WIN32
 			}
 
 			std::string UnicodeToUTF8(LPCWSTR lpszWideStr)
 			{
-				#ifdef WIN32
+#ifdef WIN32
 				int nLen = ::WideCharToMultiByte(CP_UTF8,
 												 0,
 												 lpszWideStr,
@@ -180,24 +196,27 @@ namespace d3s {
 				delete[] buffer;
 				buffer = nullptr;
 				return multStr;
-				#else
-				if (lpszWideStr == nullptr) {
+#else
+				if (lpszWideStr == nullptr)
+				{
 					return "";
 				}
-				try {
+				try
+				{
 					std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
 					return converter.to_bytes(lpszWideStr);
 				}
-				catch (const std::range_error& e) {
+				catch (const std::range_error& e)
+				{
 					// 转换失败时返回空字符串
 					return "";
 				}
-				#endif
+#endif
 			}
 
 			std::wstring Utf8ToUnicode(const std::string& str)
 			{
-				#ifdef WIN32
+#ifdef WIN32
 				int nLen = ::MultiByteToWideChar(CP_UTF8, 0, str.c_str(), str.length(), nullptr, 0);
 
 				WCHAR* buffer = new WCHAR[nLen + 1];
@@ -209,11 +228,10 @@ namespace d3s {
 				delete[] buffer;
 				buffer = nullptr;
 				return wideStr;
-				#else
+#else
 				std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
 				return converter.from_bytes(str);
-				#endif
-				
+#endif
 			}
 
 		} // namespace

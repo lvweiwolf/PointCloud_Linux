@@ -6,9 +6,10 @@
 // 修改描述：
 // 文件版权：江西博微新技术有限公司
 //////////////////////////////////////////////////////////////////////
-#pragma once
+#ifndef PYLON_REFINEMENT_H_
+#define PYLON_REFINEMENT_H_
 
-#include "../../segmentation/powerlineCurve.h"
+#include <src/segmentation/powerlineCurve.h>
 
 namespace d3s {
 	namespace pcs {
@@ -27,7 +28,7 @@ namespace d3s {
 			double part_width;
 			double curve_expand;
 
-			double max_curve_dist;		 // 距离曲线的最近阈值
+			double max_curve_dist; // 距离曲线的最近阈值
 		};
 
 		class PylonRefinement
@@ -36,7 +37,7 @@ namespace d3s {
 			typedef std::vector<osg::Vec3d> Positions;
 			typedef std::vector<osg::Vec3d> Vectors;
 			typedef std::vector<std::vector<osg::Vec3d>> Polygons;
-			
+
 
 			PylonRefinement(const PylonRefinementOptions& options,
 							PointCloudViewPtr input,
@@ -175,3 +176,5 @@ namespace d3s {
 		};
 	}
 }
+
+#endif // PYLON_REFINEMENT_H_

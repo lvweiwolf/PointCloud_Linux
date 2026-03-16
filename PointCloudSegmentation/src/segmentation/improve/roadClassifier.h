@@ -6,14 +6,12 @@
 // 修改描述：
 // 文件版权：江西博微新技术有限公司
 //////////////////////////////////////////////////////////////////////
-#pragma once
+#ifndef ROAD_CLASSIFIER_H_
+#define ROAD_CLASSIFIER_H_
 
-#include "../../../include/ICloudSegmentation.h"
-
-#include "../../algorithm/boundingbox2d.h"
-
-#include "../../segmentation/gridCell.h"
-
+#include <include/ICloudSegmentation.h>
+#include <src/algorithm/boundingbox2d.h>
+#include <src/segmentation/gridCell.h>
 
 namespace d3s {
 	namespace pcs {
@@ -122,12 +120,12 @@ namespace d3s {
 		{
 			double cell_size; // 格网单元大小
 
-			double height_threshold; // 高程差阈值
-			double slope_threshold;	 // 坡度高差阈值
-			double min_area;	 // 最小面积阈值
-			double max_area;	// 最大面积
-			double shape_threshold;	 // 形状系数阈值
-			double linearity_threshold;	// 线性系数阈值
+			double height_threshold;	// 高程差阈值
+			double slope_threshold;		// 坡度高差阈值
+			double min_area;			// 最小面积阈值
+			double max_area;			// 最大面积
+			double shape_threshold;		// 形状系数阈值
+			double linearity_threshold; // 线性系数阈值
 		};
 
 		// 道路点云分类器
@@ -156,19 +154,18 @@ namespace d3s {
 			void Segment();
 
 		private:
-
 			/**
-			*  @brief    根据道路矢量进行约束，分类道路点云
-			*
-			*  @return   void
-			*/
+			 *  @brief    根据道路矢量进行约束，分类道路点云
+			 *
+			 *  @return   void
+			 */
 			void GetRoadCandiateIndices(std::vector<int>& indices);
 
 			/**
-			*  @brief    常规道路点云分类
-			*
-			*  @return   void
-			*/
+			 *  @brief    常规道路点云分类
+			 *
+			 *  @return   void
+			 */
 			void SegmentNormal();
 
 			/**
@@ -198,13 +195,13 @@ namespace d3s {
 			void Filtering(GridPtr grid, Clusters& clusters);
 
 			/**
-			*  @brief    通过边界裁剪道路矢量
-			*
-			*  @prarm	 const BoundingBox2D & bound	矩形边界
-			*  @prarm	 std::vector<std::vector<osg::Vec3d>> & roads	道路矢量
-			*
-			*  @return   void
-			*/
+			 *  @brief    通过边界裁剪道路矢量
+			 *
+			 *  @prarm	 const BoundingBox2D & bound	矩形边界
+			 *  @prarm	 std::vector<std::vector<osg::Vec3d>> & roads	道路矢量
+			 *
+			 *  @return   void
+			 */
 			void ClipingWithBound(const BoundingBox2D& bound,
 								  std::vector<std::vector<osg::Vec3d>>& roads);
 
@@ -231,7 +228,7 @@ namespace d3s {
 			 */
 			double ComputeShapeness(GridPtr grid, const VirtualGrid::Cluster& cluster);
 
-			
+
 			/**
 			 *  @brief    计算格网类簇线性系数
 			 *
@@ -241,7 +238,7 @@ namespace d3s {
 			 *  @return   double
 			 */
 			double ComputeLinearity(GridPtr grid, const VirtualGrid::Cluster& cluster);
-						
+
 			/**
 			 *  @brief    绘制虚拟格网聚类
 			 *
@@ -262,3 +259,5 @@ namespace d3s {
 		};
 	}
 }
+
+#endif // ROAD_CLASSIFIER_H_

@@ -1,2 +1,1 @@
-//stdafx.h
-#include "logging.h"
+#include <src/utils/logging.h>

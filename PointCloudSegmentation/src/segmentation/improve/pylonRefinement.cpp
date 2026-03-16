@@ -1,23 +1,17 @@
-//stdafx.h
-#include "pylonRefinement.h"
+#include <src/segmentation/improve/pylonRefinement.h>
+#include <src/segmentation/improve/pylonClassifier.h>
+#include <src/segmentation/gridCell.h>
+#include <src/algorithm/geometry2d_op.h>
+#include <src/algorithm/math.h>
+#include <src/core/api.h>
+#include <src/core/private/cloudProcess.h>
+#include <src/core/private/rasterProcess.h>
+#include <src/core/private/statistics.h>
+#include <src/plot/plotHandle.h>
 
-#include <mutex>
-
-#include "../../algorithm/geometry2d_op.h"
-#include "../../algorithm/math.h"
-#include "../../core/api.h"
-#include "../../core/private/cloudProcess.h"
-#include "../../core/private/rasterProcess.h"
-#include "../../core/private/statistics.h"
-
-#include "../../segmentation/gridCell.h"
-
-#include "../../plot/plotHandle.h"
-
-#include "pylonClassifier.h"
-//#define RENDER_PART_OF_SPAN_BOUND
-//#define RENDER_FITTING_CURVE
-//#define RENDER_CONNECT_POSITIONS
+// #define RENDER_PART_OF_SPAN_BOUND
+// #define RENDER_FITTING_CURVE
+// #define RENDER_CONNECT_POSITIONS
 
 namespace d3s {
 	namespace pcs {
@@ -589,11 +583,10 @@ namespace d3s {
 					}
 				}
 			}
-
 		}
 
 		void PylonRefinement::MergeConnectionNearly(double tolerance, PylonConnection& connection)
-		{ 
+		{
 			// 合并距过于接近的连接点坐标
 			std::vector<std::vector<size_t>> clusters;
 			std::set<size_t> processed;

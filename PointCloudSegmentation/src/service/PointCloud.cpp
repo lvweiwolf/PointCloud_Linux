@@ -1,21 +1,19 @@
-//stdafx.h
-#include "PointCloud.h"
+#include <src/service/PointCloud.h>
+#include <src/core/api.h>
+#include <src/core/pointTypes.hpp>
+#include <src/segmentation/gridCell.h>
+#include <src/utils/logging.h>
+#include <src/utils/timer.h>
+
+#include <include/ClassificationDef.h>
+
+#include <pcl/PCLPointField.h>
+#include <pcl/common/io.h>
 
 #include <numeric>
 
-#include "../core/api.h"
-#include "../core/pointTypes.hpp"
-
-#include "../segmentation/gridCell.h"
-#include "../utils/logging.h"
-#include "../utils/timer.h"
-#include <pcl/PCLPointField.h>
-#include <pcl/common/io.h>
-#include <ClassificationDef.h>
-namespace d3s
-{
-	namespace pcs
-	{
+namespace d3s {
+	namespace pcs {
 
 		CPointCloud::CPointCloud() {}
 
@@ -67,19 +65,19 @@ namespace d3s
 				   pcl::getFieldSize(fields[distance_idx].datatype));
 		}
 
-		void CPointCloud::SetTreeId(PointId idx, uint32_t treeId) 
-		{ 
+		void CPointCloud::SetTreeId(PointId idx, uint32_t treeId)
+		{
 			if (idx < 0 || idx > _pcv.size())
 				return;
-			
+
 			_pcv.points[idx].data[3] = (float)treeId;
 		}
 
-		uint32_t CPointCloud::GetTreeId(PointId idx) const 
+		uint32_t CPointCloud::GetTreeId(PointId idx) const
 		{
 			if (idx < 0 || idx > _pcv.size())
 				return 0;
-			
+
 			return (uint32_t)_pcv.points[idx].data[3];
 		}
 
@@ -96,12 +94,12 @@ namespace d3s
 		uint32_t CPointCloud::GetClassification(PointId idx)
 		{
 			return _pcv.points[idx].label;
-			//uint32_t label = 0;
-			//GetFieldInternel("label", idx, &label);
-			//return label;
+			// uint32_t label = 0;
+			// GetFieldInternel("label", idx, &label);
+			// return label;
 		}
 
-		osg::Vec3 CPointCloud::GetXYZ(PointId idx) 
+		osg::Vec3 CPointCloud::GetXYZ(PointId idx)
 		{
 			return osg::Vec3(_pcv.points[idx].x, _pcv.points[idx].y, _pcv.points[idx].z);
 		}
@@ -152,13 +150,13 @@ namespace d3s
 			pcv->clear();
 			pcv->points.resize(data.size());
 
-			std::atomic<double> xmin (DBL_MAX);
-			std::atomic<double> ymin ( DBL_MAX);
-			std::atomic<double> zmin ( DBL_MAX);
+			std::atomic<double> xmin(DBL_MAX);
+			std::atomic<double> ymin(DBL_MAX);
+			std::atomic<double> zmin(DBL_MAX);
 
-			std::atomic<double> xmax ( - DBL_MAX);
-			std::atomic<double> ymax ( - DBL_MAX);
-			std::atomic<double> zmax ( - DBL_MAX);
+			std::atomic<double> xmax(-DBL_MAX);
+			std::atomic<double> ymax(-DBL_MAX);
+			std::atomic<double> zmax(-DBL_MAX);
 
 #ifdef _OPENMP
 #pragma omp parallel for

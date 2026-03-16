@@ -1,20 +1,14 @@
-//stdafx.h
-#include "attachmentClassifier.h"
+#include <src/segmentation/improve/attachmentClassifier.h>
+#include <src/algorithm/math.h>
+#include <src/algorithm/geometry2d_op.h>
+#include <src/algorithm/voxel_grid_filter.h>
+#include <src/core/private/cloudProcess.h>
+#include <src/core/private/rasterProcess.h>
+#include <src/core/private/statistics.h>
+#include <src/plot/geomCreator.h>
+#include <src/plot/plotHandle.h>
 
-#include <mutex>
 #include <osgDB/WriteFile>
-
-#include "../../algorithm/math.h"
-#include "../../algorithm/geometry2d_op.h"
-#include "../../algorithm/voxel_grid_filter.h"
-
-#include "../../core/private/cloudProcess.h"
-#include "../../core/private/rasterProcess.h"
-#include "../../core/private/statistics.h"
-
-#include "../../plot/geomCreator.h"
-#include "../../plot/plotHandle.h"
-
 
 // #define RENDER_PYLON_OBB
 // #define WRITE_LAS
@@ -78,7 +72,7 @@ namespace d3s {
 				fmin = DBL_MAX;
 				fmax = -DBL_MAX;
 
-				for (size_t i = 0; i < (int)points.size(); ++i)
+				for (size_t i = 0; i < points.size(); ++i)
 				{
 					float fvalue = points[i][fieldIdx];
 
@@ -2271,17 +2265,15 @@ namespace d3s {
 			int ySize = std::floor((ymax - ymin) / cellsize) + 1;
 			int zSize = std::floor((zmax - zmin) / cellsize) + 1;
 
-			CHECK_MSG(xSize > 0, StringPrintf("xmin=%lf, xmax=%lf.", xmin, xmax));
-			CHECK_MSG(ySize > 0, StringPrintf("ymin=%lf, ymax=%lf.", ymin, ymax));
-			CHECK_MSG(zSize > 0, StringPrintf("zmin=%lf, zmax=%lf.", zmin, zmax));
+			CHECK_MSG(xSize > 0, StringPrintf("xmin=%lf, xmax=%lf.", xmin, xmax).c_str());
+			CHECK_MSG(ySize > 0, StringPrintf("ymin=%lf, ymax=%lf.", ymin, ymax).c_str());
+			CHECK_MSG(zSize > 0, StringPrintf("zmin=%lf, zmax=%lf.", zmin, zmax).c_str());
 
 			grid.resize(xSize, ySize, zSize);
 			grid.cellsize = cellsize;
 			grid.center = center;
 			grid.rotation = rotation;
 			grid.obb = obb;
-
-			size_t maxsize = 0;
 
 			for (int i = 0; i < (int)indices.size(); ++i)
 			{

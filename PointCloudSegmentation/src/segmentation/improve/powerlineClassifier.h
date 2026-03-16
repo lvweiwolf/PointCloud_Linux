@@ -6,9 +6,10 @@
 // 修改描述：
 // 文件版权：江西博微新技术有限公司
 //////////////////////////////////////////////////////////////////////
-#pragma once
+#ifndef POWERLINE_CLASSIFIER_H_
+#define POWERLINE_CLASSIFIER_H_
 
-#include "../../segmentation/powerlineCurve.h"
+#include <src/segmentation/powerlineCurve.h>
 
 namespace d3s {
 	namespace pcs {
@@ -158,3 +159,5 @@ namespace d3s {
 
 	}
 }
+
+#endif // POWERLINE_CLASSIFIER_H_

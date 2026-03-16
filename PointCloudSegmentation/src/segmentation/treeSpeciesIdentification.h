@@ -9,8 +9,9 @@
 #ifndef TREE_SPECIES_IDENTIFICATION_H_
 #define TREE_SPECIES_IDENTIFICATION_H_
 
-#include "../utils/threading.h"
-#include "../core/pointTypes.h"
+#include <src/utils/threading.h>
+#include <src/core/pointTypes.h>
+
 namespace d3s {
 	namespace pcs {
 

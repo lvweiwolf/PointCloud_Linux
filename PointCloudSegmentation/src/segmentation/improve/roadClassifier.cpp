@@ -1,20 +1,14 @@
-//stdafx.h
-#include "roadClassifier.h"
+#include <src/segmentation/improve/roadClassifier.h>
+#include <src/algorithm/math.h>
+#include <src/algorithm/geometry2d_op.h>
+#include <src/core/private/rasterProcess.h>
+#include <src/core/private/cloudProcess.h>
+#include <src/core/private/gdalProcess.h>
+#include <src/plot/geomCreator.h>
+#include <src/plot/plotHandle.h>
+#include <src/service/ValueBuffer.h>
 
 #include <mutex>
-
-#include "../../algorithm/math.h"
-#include "../../algorithm/geometry2d_op.h"
-
-#include "../../plot/geomCreator.h"
-#include "../../plot/plotHandle.h"
-
-#include "../../core/private/rasterProcess.h"
-#include "../../core/private/cloudProcess.h"
-#include "../../core/private/gdalProcess.h"
-
-#include "../../service/ValueBuffer.h"
-
 
 // #define RENDER_VIRTUAL_GRID
 // #define RENDER_ROAD_VECTOR
@@ -183,11 +177,11 @@ namespace d3s {
 				_options.cell_size = 0.5;
 				_options.height_threshold = 0.5;
 				_options.slope_threshold = 0.05;
-				_options.linearity_threshold =0.85;
+				_options.linearity_threshold = 0.85;
 				_options.min_area = 200.0;
 				_options.max_area = 1000000.0;
 			}
-		
+
 			SegmentNormal();
 		}
 
@@ -211,7 +205,7 @@ namespace d3s {
 			zmin = _input->bbox.zMin();
 
 			BoundingBox2D srcBound(xmin, ymin, xmax, ymax);
-			
+
 			// 转换到原始坐标
 			xmin += _input->offset_xyz.x();
 			ymin += _input->offset_xyz.y();
@@ -261,7 +255,7 @@ namespace d3s {
 						roads.push_back(roadLine);
 				}
 			}
-			
+
 			// 根据点云边界裁剪道路矢量
 			ClipingWithBound(srcBound, roads);
 
@@ -297,7 +291,7 @@ namespace d3s {
 				xi = clamp(xi, 0, roadRaster.width() - 1);
 				yi = clamp(yi, 0, roadRaster.height() - 1);
 
-				if (roadRaster.at(xi, yi) == 1.0) 
+				if (roadRaster.at(xi, yi) == 1.0)
 				{
 					// p.label = eRoad;
 					std::unique_lock<std::mutex> lock(mtx);
@@ -541,7 +535,6 @@ namespace d3s {
 		{
 			// 矩形边界角点
 			auto RectangleClip = [](const BoundingBox2D& rectangle, osg::Vec2& p0, osg::Vec2& p1) {
-
 				if (rectangle.contains(p0) && rectangle.contains(p1))
 				{
 					// 线段两点均在矩形边界内

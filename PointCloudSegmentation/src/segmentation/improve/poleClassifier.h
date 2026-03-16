@@ -7,10 +7,15 @@
 // 文件版权：江西博微新技术有限公司
 //////////////////////////////////////////////////////////////////////
 
-#pragma once
-#include <vector>
-#include "../../core/pointTypes.h"
+#ifndef POLE_CLASSIFIER_H_
+#define POLE_CLASSIFIER_H_
+
+#include <src/core/pointTypes.h>
+
 #include <osg/Vec3d>
+
+#include <vector>
+
 namespace d3s {
 	namespace pcs {
 
@@ -18,7 +23,7 @@ namespace d3s {
 		{
 			double bound_size = 1.5;
 			double layer_step = 0.5;
-			
+
 			double pole_radius = 0.3;
 			double pole_min_area_overlap = 0.005;
 			double pole_clustering_dist = 0.1;
@@ -80,7 +85,6 @@ namespace d3s {
 			void Segment();
 
 		private:
-
 			struct PoleAxis
 			{
 				PoleAxis() {}
@@ -109,7 +113,7 @@ namespace d3s {
 												  const std::vector<osg::Vec3d>& polygon,
 												  double heightThr);
 
- 			std::vector<PoleAxis> ComputeTrunkCentroids(
+			std::vector<PoleAxis> ComputeTrunkCentroids(
 				PointCloudViewPtr input,
 				const std::vector<std::vector<int>>& arrIndices);
 
@@ -131,9 +135,11 @@ namespace d3s {
 			std::vector<int> _indices;	  // 处理点云的索引列表
 
 			Positions _polePositions; // 杆塔坐标
-			Polygons _polePolygons;  // 杆塔边界
-			Vectors _poleSides;	  // 杆塔横担方向
+			Polygons _polePolygons;	  // 杆塔边界
+			Vectors _poleSides;		  // 杆塔横担方向
 		};
 
 	}
 }
+
+#endif // POLE_CLASSIFIER_H_

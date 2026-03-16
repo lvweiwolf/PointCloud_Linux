@@ -1,5 +1,4 @@
-//stdafx.h
-#include "timer.h"
+#include <src/utils/timer.h>
 
 using namespace std::chrono;
 
@@ -64,17 +63,17 @@ namespace d3s {
 
 		/*void Timer::PrintSeconds() const
 		{
-			std::cout << boost::format("ºÄÊ±: %.5f [seconds]") % ElapsedSeconds() << std::endl;
+			std::cout << boost::format("è€—æ—¶: %.5f [seconds]") % ElapsedSeconds() << std::endl;
 		}
 
 		void Timer::PrintMinutes() const
 		{
-			std::cout << boost::format("ºÄÊ±: %.3f [minutes]") % ElapsedMinutes() << std::endl;
+			std::cout << boost::format("è€—æ—¶: %.3f [minutes]") % ElapsedMinutes() << std::endl;
 		}
 
 		void Timer::PrintHours() const
 		{
-			std::cout << boost::format("ºÄÊ±: %.3f [hours]") % ElapsedHours() << std::endl;
+			std::cout << boost::format("è€—æ—¶: %.3f [hours]") % ElapsedHours() << std::endl;
 		}*/
 
 	}

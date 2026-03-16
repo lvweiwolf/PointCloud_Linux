@@ -1,5 +1,4 @@
-//stdafx.h
-#include "CloudSegmentation.h"
+#include <src/service/CloudSegmentation.h>
 
 namespace d3s {
 	namespace pcs {
@@ -16,12 +15,12 @@ namespace d3s {
 
 		void CCloudProcess::SetIndices(const std::vector<PointId>& indices) { _indices = indices; }
 
-		//void CCloudProcess::SetProgressCallback(IProgressPtr progress)
+		// void CCloudProcess::SetProgressCallback(IProgressPtr progress)
 		//{
 		//	_progressCallback = progress;
-		//}
+		// }
 
-		//void CCloudProcess::SetProgressRange(double start, double end)
+		// void CCloudProcess::SetProgressRange(double start, double end)
 		//{
 		//	_start = start;
 		//	_end = end;
@@ -29,7 +28,7 @@ namespace d3s {
 		//	CHECK(_start <= _end);
 		//}
 
-		//void CCloudProcess::Progress(double precent, const char* pszMessage)
+		// void CCloudProcess::Progress(double precent, const char* pszMessage)
 		//{
 		//	CHECK(_start <= _end);
 
@@ -40,6 +39,6 @@ namespace d3s {
 		//	_progressCallback->Progress(pos, pszMessage, nullptr);
 		//}
 
-		
+
 	}
 }

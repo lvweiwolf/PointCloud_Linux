@@ -1,25 +1,21 @@
-//stdafx.h
-#include "wireClassifier.h"
-
-#include "../../algorithm/geometry2d_op.h"
-
-#include "../../core/private/cloudProcess.h"
-#include "../../core/private/statistics.h"
-#include "../../core/api.h"
-#include "../../plot/plotHandle.h"
-
-#include "../../segmentation/gridCell.h"
-#include "../../segmentation/pylonCommon.h"
-#include "../../utils/logging.h"
-#include "../../utils/stringutil.h"
+#include <src/segmentation/improve/wireClassifier.h>
+#include <src/segmentation/gridCell.h>
+#include <src/segmentation/pylonCommon.h>
+#include <src/algorithm/geometry2d_op.h>
+#include <src/core/private/cloudProcess.h>
+#include <src/core/private/statistics.h>
+#include <src/core/api.h>
+#include <src/plot/plotHandle.h>
+#include <src/utils/logging.h>
+#include <src/utils/stringutil.h>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/opencv.hpp>
 
 #define RENDER_SLCIE_BOUND
 #define RENDER_TRUNKS
-// #define RENDER_FITTING_CURVE
 
+// #define RENDER_FITTING_CURVE
 // #define CLUSTERING_USING_VOXELS
 
 namespace d3s {
@@ -56,7 +52,7 @@ namespace d3s {
 			double layerStep = 0.5;
 			double layerClusterDist = 0.1;
 			double minOverlap = 0.005;
-			
+
 			int curveMinPts = _options.curve_min_points;
 
 			Grid2D grid;
@@ -124,8 +120,8 @@ namespace d3s {
 												   1);
 
 
-			
-			
+
+
 			for (size_t i = 0; i < spanBeforeFirst.sliceInidces.size(); ++i)
 			{
 				const auto& sliceIndices = spanBeforeFirst.sliceInidces[i];
@@ -142,7 +138,7 @@ namespace d3s {
 			std::vector<bool> linearity = ComputeLinearity(_input, spanIndices);
 
 			cv::RNG rng(time(0));
-			
+
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
@@ -153,18 +149,18 @@ namespace d3s {
 
 				// 每个档内点云的电力线分类
 				ClassifyInSpan(result);
-				
+
 				// 根据档内点云线性特征修复导线
 				ReclassifyWithLinearity(linearity, result);
 
 				int numPowerlines = result.powerlines.size();
 				PCS_INFO("[WireClassifier] 提取档 %d 内电力线点云 %d", index, numPowerlines);
 
-				//setClassification(eWater, result.powerlinesFail, *_input);
+				// setClassification(eWater, result.powerlinesFail, *_input);
 				setClassification(ePowerline, result.powerlines, *_input);
-			
+
 				// 根据拟合曲线修复导线
-				wireSpans[i] = ReclassifyWithCurve(result, curveMinPts); 	
+				wireSpans[i] = ReclassifyWithCurve(result, curveMinPts);
 
 				setClassification(ePowerline, result.powerlines, *_input);
 
@@ -207,10 +203,9 @@ namespace d3s {
 								   osg::Vec4(r, g, b, 0.0f),
 								   osg::Vec4(r, g, b, 1.0f));
 					}
-				
 				}
 #endif
-				
+
 				std::vector<std::vector<int>> poleIndicesList;
 				ReclassifyPoleFromUnclassified(trunks,
 											   trunkClusters,
@@ -227,7 +222,7 @@ namespace d3s {
 			// 处理前方档边界范围之外的点云
 			{
 				ClassifyInSpan(spanBeforeFirst);
-				
+
 				// 根据档内点云线性特征修复导线
 				ReclassifyWithLinearity(linearity, spanBeforeFirst);
 
@@ -321,7 +316,7 @@ namespace d3s {
 			Polygons slicePolygons;
 			osg::Vec3d t0 = p0 + dir * height0 * 0.5;
 			osg::Vec3d t1 = p1 - dir * height1 * 0.5;
-			
+
 			double spanLength = (t1 - t0).length();
 			int numSteps = std::max(1, (int)std::floor(spanLength / step));
 			step = spanLength / (double)numSteps;
@@ -385,7 +380,7 @@ namespace d3s {
 
 				slicePolygons.push_back(polygon);
 			}
-			
+
 			std::vector<std::vector<int>> sliceIndices;
 			sliceIndices.resize(slicePolygons.size());
 
@@ -560,7 +555,7 @@ namespace d3s {
 			double T_linearity2 = 0.90;
 
 			CHECK(result.sliceInidces.size() == result.slicePolygons.size());
-			
+
 			// 每个切块内点云聚类，并分析类簇的线性性质
 			for (size_t i = 0; i < result.sliceInidces.size(); ++i)
 			{
@@ -705,7 +700,7 @@ namespace d3s {
 		}
 
 		std::vector<bool> WireClassifier::ComputeLinearity(PointCloudViewPtr input,
-														   const std::vector<int>& indices) 
+														   const std::vector<int>& indices)
 		{
 			double linearityRadius = _options.linearity_radius;
 			double linearityThr = _options.linearity_threshold;
@@ -769,7 +764,7 @@ namespace d3s {
 			if (!indices.empty())
 			{
 				std::vector<std::vector<int>> clusters; // 档内点云整条电力线的聚类
-				
+
 #ifdef CLUSTERING_USING_VOXELS
 				EuclideanVoxelCluster(_input,
 									  indices,
@@ -810,7 +805,7 @@ namespace d3s {
 				for (size_t i = 0; i < clusters.size(); ++i)
 				{
 					const auto& cluster = clusters.at(i);
-				
+
 					osg::Vec4ub c =
 						ColorManager::colorTable[eGround +
 												 label % (eNumOfClassification - eGround)];
@@ -1110,7 +1105,7 @@ namespace d3s {
 				GetMainVector(_input, poleTrunks, center, dir);
 
 #ifdef RENDER_TRUNKS
-				std::vector<osg::Vec3d> path = { center -dir * 6.0, center + dir * 6.0 };
+				std::vector<osg::Vec3d> path = { center - dir * 6.0, center + dir * 6.0 };
 				RenderLinePath(StringPrintf("span_pole_pca_v_%d", i),
 							   path,
 							   _input,
@@ -1145,10 +1140,10 @@ namespace d3s {
 			{
 				const auto& centroid = centroids[i];
 				auto& poleIndices = poleIndicesList[i];
-					
+
 				// 统计电杆高度
 				float zmax = -FLT_MAX;
-				
+
 				for (size_t j = 0; j < poleIndices.size(); ++j)
 				{
 					const auto& p = _input->points[poleIndices[j]];
@@ -1164,7 +1159,7 @@ namespace d3s {
 					double dist = std::sqrt((p.x - centroid.x()) * (p.x - centroid.x()) +
 											(p.y - centroid.y()) * (p.y - centroid.y()));
 
-					if (p.z > lower &&  dist < head_radius)
+					if (p.z > lower && dist < head_radius)
 					{
 						poleIndices.push_back(tempIndices[j]);
 						tempIndices.erase(tempIndices.begin() + j);

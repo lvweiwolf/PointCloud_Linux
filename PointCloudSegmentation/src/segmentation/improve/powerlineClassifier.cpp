@@ -1,20 +1,15 @@
-//stdafx.h
-#include "powerlineClassifier.h"
+#include <src/segmentation/improve/powerlineClassifier.h>
+#include <src/segmentation/gridCell.h>
+#include <src/algorithm/geometry2d_op.h>
+#include <src/core/api.h>
+#include <src/core/pointTypes.hpp>
+#include <src/core/private/cloudProcess.h>
+#include <src/core/private/statistics.h>
+#include <src/plot/plotHandle.h>
+#include <src/plot/geomCreator.h>
+#include <src/utils/logging.h>
 
-#include <mutex>
-
-#include "../../algorithm/geometry2d_op.h"
-#include "../../core/api.h"
-#include "../../core/pointTypes.hpp"
-#include "../../core/private/cloudProcess.h"
-#include "../../core/private/statistics.h"
-
-#include "../../plot/plotHandle.h"
-#include "../../plot/geomCreator.h"
-
-#include "../../segmentation/gridCell.h"
-#include "../../utils/logging.h"
-#include <ClassificationDef.h>
+#include <include/ClassificationDef.h>
 
 // #define RENDER_SLCIE_BOUND
 // #define RENDER_OUT_SPAN_SHORT
@@ -101,7 +96,7 @@ namespace d3s {
 
 			spanBeforeFirst = ExtractPointsOutOfSpan(grid,
 													 pylonPositions[0],
-													 pylonPositions[0] - pylonPositions[1], 
+													 pylonPositions[0] - pylonPositions[1],
 													 pylonSides[0],
 													 pylonPolygons[0],
 #ifdef RENDER_OUT_SPAN_SHORT
@@ -248,13 +243,13 @@ namespace d3s {
 				double side_len0 = width;
 				double side_len1 = width;
 
-				if (i == 0) 
+				if (i == 0)
 				{
 					double cos0 = fabs(spatial.side0 * ortho);
 
 					if (cos0 == 0.0)
 						side0 = ortho;
-					else 
+					else
 					{
 						side0 = spatial.side0;
 						side_len0 = width / cos0;
@@ -715,7 +710,7 @@ namespace d3s {
 
 					// 添加单股导线的曲线到当前档
 					span.push_back(curve);
-					 
+
 					label++;
 				}
 
@@ -819,7 +814,7 @@ namespace d3s {
 			return span;
 		}
 
-		void PowerlineClassifier::ExcludeDifferentDirection(SpanResult& result) 
+		void PowerlineClassifier::ExcludeDifferentDirection(SpanResult& result)
 		{
 			double T_r = _options.cluster_radius;
 
@@ -858,7 +853,7 @@ namespace d3s {
 				for (size_t k = 0; k < cluster.size(); ++k)
 				{
 					const auto& p = _input->points[cluster[k]];
-					osg::Vec3d v = osg::Vec3d(p.x, p.y, 0.0);	// 平面方向
+					osg::Vec3d v = osg::Vec3d(p.x, p.y, 0.0); // 平面方向
 					pts.push_back(v);
 				}
 
