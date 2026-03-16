@@ -69,7 +69,6 @@ set(CGAL_Part_Libs
 target_link_libraries(PointCloudSegmentation PUBLIC 
 	OpenMP::OpenMP_CXX 
 	Vulkan::Vulkan
-	SQLite::SQLite3
 	CommonTools 
 	${Boost_Part_Libs} 
 	${PCL_Part_Libs} 
@@ -81,7 +80,7 @@ target_link_libraries(PointCloudSegmentation PUBLIC
 	${ncnn_LIBRARY} 
 	${bit7z_LIBRARY} 
 	${LASlib_LIBRARY}
-	${UUID_LIBRARY}
+	${UUID_LIBRARY} 
 )
 
 set_target_properties(PointCloudSegmentation PROPERTIES

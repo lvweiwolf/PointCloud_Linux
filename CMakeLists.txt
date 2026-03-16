@@ -17,8 +17,7 @@ if(NOT DEFINED PROJECT_SOURCE_DIR)
 endif()
 
 
-option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
-
+# option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 
 
 # 引用编译器配置
@@ -30,9 +29,6 @@ include(${PROJECT_SOURCE_DIR}/cmake/toolchain.cmake)
 find_package(OpenMP REQUIRED)
 
 find_package(Vulkan REQUIRED)
-
-find_package(SQLite3 REQUIRED)
-
 
 # 头文件搜索路径
 # include_directories(${PROJECT_SOURCE_DIR}/CommonTools)

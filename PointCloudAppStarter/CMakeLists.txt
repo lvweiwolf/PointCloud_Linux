@@ -19,6 +19,7 @@ target_link_libraries(AppStarter PUBLIC
 	${CGAL_LIBS} 
 	${Ceres_LIBRARY} 
 	${ncnn_LIBRARY} 
+	${SQLite3_LIBRARY} 
 )
 
 set_target_properties(AppStarter PROPERTIES

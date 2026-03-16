@@ -295,14 +295,14 @@ endmacro()
 # =============================================================================
 # SQLite3
 # =============================================================================
-# set(SQLite3_INCLUDE_DIR "${THIRDPART_INCLUDE_DIR}")
-# set(SQLite3_LIBRARY sqlite3)
-# set(SQLite3_FOUND TRUE)
+set(SQLite3_INCLUDE_DIR "${THIRDPART_INCLUDE_DIR}")
+set(SQLite3_LIBRARY sqlite3)
+set(SQLite3_FOUND TRUE)
 
-# macro(target_link_sqlite3 target)
-#     target_include_directories(${target} PRIVATE ${SQLite3_INCLUDE_DIR})
-#     target_link_libraries(${target} ${SQLite3_LIBRARY})
-# endmacro()
+macro(target_link_sqlite3 target)
+    target_include_directories(${target} PRIVATE ${SQLite3_INCLUDE_DIR})
+    target_link_libraries(${target} ${SQLite3_LIBRARY})
+endmacro()
 
 # =============================================================================
 # curl
