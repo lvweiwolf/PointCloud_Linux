@@ -29,18 +29,59 @@ target_include_directories(PointCloudSegmentation PUBLIC
 	${THIRDPART_INCLUDE_DIR}
 )
 
+set(OpenCV_Part_Libs
+    opencv_core
+	opencv_imgproc
+	opencv_dnn
+	opencv_flann
+	opencv_imgcodecs
+)
+
+set(Boost_Part_Libs
+	boost_locale
+	boost_system
+	boost_filesystem
+)
+
+set(PCL_Part_Libs
+	pcl_io
+	pcl_io_ply
+	pcl_kdtree
+	pcl_keypoints
+	pcl_ml
+	pcl_octree
+	pcl_search
+	pcl_recognition
+	pcl_filters
+	pcl_segmentation
+	pcl_common
+	pcl_features
+)
+
+set(CGAL_Part_Libs
+	CGAL 
+	CGAL_Core 
+	gmp
+	mpfr
+)
+
 # 依赖库引用
 target_link_libraries(PointCloudSegmentation PUBLIC 
 	OpenMP::OpenMP_CXX 
 	Vulkan::Vulkan
+	SQLite::SQLite3
 	CommonTools 
-	${Boost_LIBRARIES} 
+	${Boost_Part_Libs} 
+	${PCL_Part_Libs} 
+	${CGAL_Part_Libs} 
+	${OpenCV_Part_Libs} 
 	${OSG_LIBS} 
 	${OSGEARTH_LIBS}
-	${PCL_LIBS} 
-	${CGAL_LIBS} 
 	${Ceres_LIBRARY} 
 	${ncnn_LIBRARY} 
+	${bit7z_LIBRARY} 
+	${LASlib_LIBRARY}
+	${UUID_LIBRARY}
 )
 
 set_target_properties(PointCloudSegmentation PROPERTIES

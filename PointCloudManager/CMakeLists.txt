@@ -39,6 +39,7 @@ target_link_libraries(PointCloudManager PUBLIC
 	Vulkan::Vulkan
 	CommonTools 
 	PointCloudSegmentation 
+	
 )
 
 set_target_properties(PointCloudManager PROPERTIES

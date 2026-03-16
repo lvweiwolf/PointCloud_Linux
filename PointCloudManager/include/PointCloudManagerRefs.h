@@ -11,4 +11,8 @@
 
 #include <ProjectManager/ProjectManagerTool.h>
 
+#include <Segment/PointCloudManagerDef.h>
+#include <Segment/DataManager.h>
+#include <Segment/PCAutoSegmentToolkit.h>
+
 #endif // POINT_CLOUD_INCLUDE_H_

@@ -25,11 +25,13 @@ option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 include(${PROJECT_SOURCE_DIR}/cmake/config.cmake)
 
 # 引用第三方库配置
-include(${PROJECT_SOURCE_DIR}/../ThirdPart/toolchain.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/toolchain.cmake)
 
 find_package(OpenMP REQUIRED)
 
 find_package(Vulkan REQUIRED)
+
+find_package(SQLite3 REQUIRED)
 
 
 # 头文件搜索路径
@@ -52,6 +54,7 @@ endif()
 add_subdirectory(CommonTools)
 add_subdirectory(PointCloudSegmentation)
 add_subdirectory(PointCloudManager)
+add_subdirectory(PointCloudAppStarter)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 

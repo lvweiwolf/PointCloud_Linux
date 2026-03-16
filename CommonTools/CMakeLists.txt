@@ -30,6 +30,7 @@ target_include_directories(CommonTools PUBLIC
 target_link_libraries(CommonTools PUBLIC 
 	OpenMP::OpenMP_CXX 
 	${OSG_LIBS}
+	${pugixml_LIBRARY}
 )
 
 set_target_properties(CommonTools PROPERTIES
