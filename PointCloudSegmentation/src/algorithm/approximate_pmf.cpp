@@ -5,7 +5,6 @@
 // #include <pcl/impl/pcl_base.hpp>
 // #include <pcl/point_types.h>
 
-#define PCL_ONLY_CORE_POINT_TYPES
 
 #ifdef PCL_ONLY_CORE_POINT_TYPES
 PCL_INSTANTIATE(

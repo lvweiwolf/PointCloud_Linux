@@ -128,5 +128,8 @@ namespace d3s {
 	}
 }
 
+#ifdef PCL_NO_PRECOMPILE
+#include <src/algorithm/approximate_pmf.hpp>
+#endif
 
 #endif // APPROXIMATE_PMF_H_

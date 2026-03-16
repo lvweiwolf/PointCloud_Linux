@@ -10,9 +10,14 @@ list(APPEND SOURCES ${INC_SRC}
                     ${DATA_SRC} 
                     ${STRING_SRC})
 
-add_library(CommonTools ${SOURCES})
+add_library(CommonTools SHARED 
+	 ${SOURCES}
+)
+
 apply_compiler_config(CommonTools)
+
 target_compile_definitions(CommonTools PUBLIC 
+	COMMONTOOLSAPI 
 	_USE_MATH_DEFINES 
 	GOOGLE_GLOG_DLL_DECL
 )
@@ -25,8 +30,8 @@ target_include_directories(CommonTools PUBLIC
 
 # 依赖库引用
 target_link_libraries(CommonTools PUBLIC 
-	${OSG_LIBS}
 	OpenMP::OpenMP_CXX 
+	${OSG_LIBS}
 )
 
 set_target_properties(CommonTools PROPERTIES

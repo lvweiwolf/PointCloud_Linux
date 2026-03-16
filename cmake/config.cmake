@@ -133,8 +133,11 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         list(APPEND COMMON_COMPILE_OPTIONS
             -O0     # 无优化
             -g3     # 最详细调试信息
-            -ggdb   # GDB 调试信息
+            -fno-strict-aliasing
             -fno-omit-frame-pointer
+            -fpic
+            -fthreadsafe-statics
+            -fexceptions
         )
     else()
         # Release 模式特定选项
@@ -156,6 +159,7 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         -Wextra                # 额外警告
         -Wpedantic             # 严格标准警告
         -Wno-unused-parameter  # 忽略未使用参数警告
+        -Wno-enum-constexpr-conversion
         -fcolor-diagnostics    # 彩色诊断输出
         -fdiagnostics-show-template-tree  # 显示模板树
     )
@@ -165,8 +169,11 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         list(APPEND COMMON_COMPILE_OPTIONS
             -O0     # 无优化
             -g      # 调试信息
+            -fno-strict-aliasing
             -fno-omit-frame-pointer
-            # -fsanitize-address-use-after-scope  # 地址消毒器
+            -fpic
+            -fthreadsafe-statics
+            -fexceptions
         )
     else()
         # Release 模式特定选项

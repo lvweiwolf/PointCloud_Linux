@@ -239,13 +239,13 @@ namespace d3s {
 								{
 									if (!numericCast(s, t))
 									{
-										std::ostringstream oss;
+										std::stringstream oss;
 										oss << s;
+										std::string srcname = oss.str();
 
 										throw CantWriteBlock(
-											StringPrintf("Unable to convert data for raster type "
-														 "as requested: %s -> %s.",
-														 oss.str(),
+											StringPrintf("Unable to convert data for raster type as requested: %s -> %s.",
+														 srcname.c_str(),
 														 typeid(T).name()));
 									}
 								}

@@ -9,7 +9,7 @@
 #ifndef POINT_CLOUD_WRITER_H_
 #define POINT_CLOUD_WRITER_H_
 
-#include <src/core/pointTypes.h>
+#include <src/core/pointTypes.hpp>
 
 namespace d3s {
 	namespace pcs {

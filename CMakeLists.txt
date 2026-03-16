@@ -20,12 +20,12 @@ endif()
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 
 
+
 # 引用编译器配置
 include(${PROJECT_SOURCE_DIR}/cmake/config.cmake)
 
 # 引用第三方库配置
 include(${PROJECT_SOURCE_DIR}/../ThirdPart/toolchain.cmake)
-
 
 find_package(OpenMP REQUIRED)
 
@@ -41,6 +41,12 @@ find_package(Vulkan REQUIRED)
 
 # include_directories(${OSG_INCLUDE_DIR})
 # list(APPEND DEPENDENCY_LIBS ${OSG_LIBS})
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    add_definitions(-DBOOST_ATOMIC_NO_CMPXCHG16B)
+    # 或更保守地禁用所有无锁实现：
+    # add_definitions(-DBOOST_ATOMIC_NO_LOCKFREE)
+endif()
 
 
 add_subdirectory(CommonTools)

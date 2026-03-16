@@ -1,5 +1,5 @@
-#ifndef __PTMUTEXLOCK_H__
-#define __PTMUTEXLOCK_H__
+#ifndef PTMUTEXLOCK_H_
+#define PTMUTEXLOCK_H_
 
 #include <assert.h>
 
@@ -12,13 +12,13 @@
 #endif
 
 
-class ptMutexLock // ½¨Á¢Ò»¸öÏß³Ì»¥³âËø
+class ptMutexLock // å»ºç«‹ä¸€ä¸ªçº¿ç¨‹äº’æ–¥é”
 {
 public:
 #if defined(__GNUC__)
-	ptMutexLock(pthread_mutexattr_t* muterattr = NULL) // ³õÊ¼»¯Ò»¸öËø
+	ptMutexLock(pthread_mutexattr_t* muterattr = NULL) // åˆå§‹åŒ–ä¸€ä¸ªé”
 #else
-	ptMutexLock() // ³õÊ¼»¯Ò»¸öËø
+	ptMutexLock() // åˆå§‹åŒ–ä¸€ä¸ªé”
 #endif
 	{
 #if defined(_WIN32)
@@ -28,7 +28,7 @@ public:
 #endif
 	}
 
-	virtual ~ptMutexLock() // É¾³ıËø
+	virtual ~ptMutexLock() // åˆ é™¤é”
 	{
 #if defined(_WIN32)
 		DeleteCriticalSection(&mutex);
@@ -37,7 +37,7 @@ public:
 #endif
 	}
 
-	inline void Lock() // Ëø¶¨
+	inline void Lock() // é”å®š
 	{
 #if defined(_WIN32)
 		EnterCriticalSection(&mutex);
@@ -46,7 +46,7 @@ public:
 #endif
 	}
 
-	inline void unLock() // ½âËø
+	inline void unLock() // è§£é”
 	{
 #if defined(_WIN32)
 		LeaveCriticalSection(&mutex);
@@ -56,10 +56,10 @@ public:
 	}
 
 #if !defined(_WIN32) || (_WIN32_WINNT >= 0x0400)
-	inline bool tryLock() // ÊÔÍ¼¼ÓËø£¬·Ç×èÈû
+	inline bool tryLock() // è¯•å›¾åŠ é”ï¼Œéé˜»å¡
 	{
 #if defined(_WIN32)
-		return TryEnterCriticalSection(&mutex); // 95/98²»Ö§³Ö
+		return TryEnterCriticalSection(&mutex); // 95/98ä¸æ”¯æŒ
 #elif defined(__GNUC__)
 		return (pthread_mutex_trylock(&mutex) == 0);
 #endif
@@ -80,7 +80,7 @@ private:
 #ifndef __PTMUTEXLOCKADP_H__
 #define __PTMUTEXLOCKADP_H__
 
-class ptMutexLockAdp // ¶Ô»¥³âËøµÄÒ»¸ö¼òµ¥µÄ°ü×°,²»Ö§³Ö¶à¼¶Ëø¶¨
+class ptMutexLockAdp // å¯¹äº’æ–¥é”çš„ä¸€ä¸ªç®€å•çš„åŒ…è£…,ä¸æ”¯æŒå¤šçº§é”å®š
 {
 public:
 	ptMutexLockAdp(ptMutexLock* mutex, bool bInitialLock = true)
@@ -129,4 +129,4 @@ private:
 	bool islock;
 };
 
-#endif
+#endif // PTMUTEXLOCK_H_

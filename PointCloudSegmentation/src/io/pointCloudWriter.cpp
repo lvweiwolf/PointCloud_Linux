@@ -12,6 +12,7 @@
 
 #include <pcl/io/pcd_io.h>
 
+
 namespace d3s {
 	namespace pcs {
 		namespace io {

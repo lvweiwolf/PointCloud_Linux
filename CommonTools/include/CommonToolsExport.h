@@ -5,7 +5,6 @@
 #ifdef __linux__
 #ifdef COMMONTOOLSAPI
 #define COMMONTOOLS_EXPORT __attribute__((visibility("default")))
-
 #else
 #define COMMONTOOLS_EXPORT
 #endif
