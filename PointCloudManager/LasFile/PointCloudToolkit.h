@@ -15,6 +15,7 @@
 
 #include <osg/BoundingBox>
 #include <osg/Geode>
+#include <osg/Geometry>
 #include <osg/Matrix>
 #include <osg/Vec3d>
 #include <osg/Vec4>
