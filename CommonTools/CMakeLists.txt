@@ -29,8 +29,8 @@ target_include_directories(CommonTools PUBLIC
 # 依赖库引用
 target_link_libraries(CommonTools PUBLIC 
 	OpenMP::OpenMP_CXX 
+	pugixml::pugixml
 	${OSG_LIBS}
-	${pugixml_LIBRARY}
 )
 
 set_target_properties(CommonTools PROPERTIES

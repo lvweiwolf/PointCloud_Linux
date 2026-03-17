@@ -11,9 +11,13 @@
             "program": "${workspaceFolder}/out/build/linux-debug/bin/AppStarter",
             "args": [],
             "cwd": "${workspaceFolder}",
+            "stopOnEntry": false,
             "env":{
                 "LD_LIBRARY_PATH": "/home/lvwei/cloud/ThirdPart/lib:/home/lvwei/cloud/ThirdPart/lib64:$LD_LIBRARY_PATH"
-            }
+            },
+            "preLaunchTask": "CMake: 生成"
         }
+
+
     ]
 }

@@ -11,7 +11,7 @@ namespace pc {
 
 		CModelNode::~CModelNode()
 		{
-			// �ͷ������б�
+			// 释放数据列表
 			if (nullptr != _pDataMap)
 			{
 				_pDataMap->clear();
@@ -53,7 +53,7 @@ namespace pc {
 
 		const pc::data::CAny& CModelNode::GetData(LPCWSTR lpKey, const pc::data::CAny& defData)
 		{
-			static pc::data::CAny stAny; // ���ڷ�����ʱ����
+			static pc::data::CAny stAny; // 用于返回临时引用
 			if (nullptr == lpKey && defData.IsEmpty())
 				return stAny;
 
@@ -66,17 +66,17 @@ namespace pc {
 				return findIter->second;
 			}
 
-			// û���ҵ�������Ĭ��ֵΪ�շ���
+			// 没有找到并且是默认值为空返回
 			if (defData.IsEmpty())
 			{
 				return stAny;
 			}
 
-			// ����Ĭ��ֵ
+			// 添加默认值
 			std::pair<CModelNodeDataMapIter, bool> ret =
 				_pDataMap->insert(CModelNodeDataMap::value_type(lpKey, defData));
 
-			// ���������ӵ�Ĭ��ֵ
+			// 返回新添加的默认值
 			return ret.first->second;
 		}
 
@@ -136,7 +136,7 @@ namespace pc {
 					return pNode;
 			}
 
-			// �������򴴽�
+			// 不存在则创建
 			if (bCreate)
 			{
 				return InsertNode(getChildCount(), nNodeType);
@@ -147,9 +147,9 @@ namespace pc {
 
 		CModelNodePtr CModelNode::InsertNode(size_t nIndex, int nTag)
 		{
-			// �������Ϸ���
+			// 检查输入合法性
 			size_t nSubCount = getChildCount();
-			if (static_cast<int>(nIndex) == -1)
+			if (nIndex == -1)
 			{
 				nIndex = nSubCount;
 			}
@@ -159,7 +159,7 @@ namespace pc {
 
 			CModelNodePtr pNode = new CModelNode(nTag);
 
-			// �����ӽڵ�
+			// 插入子节点
 			insertChild(nIndex, pNode);
 
 			return pNode;
@@ -167,13 +167,13 @@ namespace pc {
 
 		CModelNodePtr CModelNode::InsertNode(CModelNodePtr pInsertNode, size_t nIndex)
 		{
-			// �������Ϸ���
+			// 检查输入合法性
 			if (NULL == pInsertNode)
 				return NULL;
 
-			// �������Ϸ���
+			// 检查输入合法性
 			size_t nSubCount = getChildCount();
-			if (static_cast<int>(nIndex) == -1)
+			if (nIndex == -1)
 			{
 				nIndex = nSubCount;
 			}
@@ -181,7 +181,7 @@ namespace pc {
 			if ((size_t(-1) != nIndex) && (nIndex > nSubCount))
 				return nullptr;
 
-			// �����ӽڵ�
+			// 插入子节点
 			insertChild(nIndex, pInsertNode);
 			return pInsertNode;
 		}
@@ -224,11 +224,11 @@ namespace pc {
 			if (nullptr == pSrcNode || pSrcNode == this)
 				return;
 
-			// ���Դ��������
+			// 清除源所有属性
 			RemoveAllData();
 			setNodeTypeId(pSrcNode->getNodeTypeId());
 
-			// ��������,����������¼
+			// 拷贝属性,触发撤销记录
 			const CModelNodeDataMap& dataMap = pSrcNode->GetDataMap();
 			for (auto it : dataMap)
 			{
@@ -238,10 +238,10 @@ namespace pc {
 			if (!bRecursion)
 				return;
 
-			// ɾ����ǰ�����ӽڵ�
+			// 删除当前所有子节点
 			removeAllChild(true);
 
-			// ��ʼ�����ӽڵ�
+			// 开始拷贝子节点
 			int nCount = pSrcNode->getChildCount();
 			for (int i = 0; i < nCount; i++)
 			{
@@ -309,7 +309,7 @@ namespace pc {
 			if (oldData == data)
 				return;
 
-			// �޸�
+			// 修改
 			if (bAttach)
 				oldData.Attach(data);
 			else
@@ -355,11 +355,11 @@ namespace pc {
 			{
 				if (*it == node)
 				{
-					it = _childNodes.erase(it); // ע�⣺erase����ָ����һ��Ԫ�صĵ�����
+					it = _childNodes.erase(it); // 注意：erase返回指向下一个元素的迭代器
 				}
 				else
 				{
-					++it; // �������Ҫɾ�������ƶ�����һ��Ԫ��
+					++it; // 如果不需要删除，则移动到下一个元素
 				}
 			}
 		}

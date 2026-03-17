@@ -17,6 +17,9 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl/octree/octree_pointcloud.h>
 
+#include <mutex>
+#include <condition_variable>
+
 
 #define PieceTwoSize 1000.00
 #define MAX_MEMORY_POINT_NUM 40000000
@@ -541,30 +544,14 @@ class CPointToPieceProcessThread : public OpenThreads::Thread
 {
 public:
 	CPointToPieceProcessThread(CPointCloudTool* pLasFileProcess)
-		: _curArrPoint(nullptr), _pLasFileProcess(pLasFileProcess)
+		: _curArrPoint(nullptr), _pLasFileProcess(pLasFileProcess),
+		  _eventFlag(false), _stopEventFlag(false), _bRun(true)
 	{
-		// 初始化互斥锁和条件变量
-		pthread_mutex_init(&_mutex, nullptr);
-		pthread_cond_init(&_condEvent, nullptr);
-		pthread_mutex_init(&_stopMutex, nullptr);
-		pthread_cond_init(&_condStopEvent, nullptr);
-
-		// 初始化标志
-		_eventFlag = false;
-		_stopEventFlag = false;
-
-		_bRun = true;
 	};
 
 	~CPointToPieceProcessThread()
 	{
 		WaitComplete();
-
-		// 销毁互斥锁和条件变量
-		pthread_mutex_destroy(&_mutex);
-		pthread_cond_destroy(&_condEvent);
-		pthread_mutex_destroy(&_stopMutex);
-		pthread_cond_destroy(&_condStopEvent);
 	};
 
 	virtual void run(void) override
@@ -572,28 +559,26 @@ public:
 		while (_bRun)
 		{
 			// 设置停止事件（通知主线程已暂停）
-			pthread_mutex_lock(&_stopMutex);
-			_stopEventFlag = true;
-			pthread_cond_signal(&_condStopEvent);
-			pthread_mutex_unlock(&_stopMutex);
+			{
+				std::lock_guard<std::mutex> lock(_stopMutex);
+				_stopEventFlag = true;
+			}
+			_condStopEvent.notify_one();
 
 			// 等待事件（等待主线程设置新数据）
-			pthread_mutex_lock(&_mutex);
-			while (!_eventFlag && _bRun)
 			{
-				pthread_cond_wait(&_condEvent, &_mutex);
-			}
+				std::unique_lock<std::mutex> lock(_mutex);
+				_condEvent.wait(lock, [this] { return _eventFlag || !_bRun; });
 
-			// 检查是否需要退出
-			if (!_bRun)
-			{
-				pthread_mutex_unlock(&_mutex);
-				break; // 退出线程
-			}
+				// 检查是否需要退出
+				if (!_bRun)
+				{
+					break; // 退出线程
+				}
 
-			// 重置事件标志
-			_eventFlag = false;
-			pthread_mutex_unlock(&_mutex);
+				// 重置事件标志
+				_eventFlag = false;
+			}
 
 			// 处理数据
 			ProcessPointData();
@@ -633,13 +618,11 @@ public:
 	void SetArrPoint(pcl::PointXYZRGBA* pArrPoint, I64 nPointCount)
 	{
 		// 等待停止事件（等待线程暂停）
-		pthread_mutex_lock(&_stopMutex);
-		while (!_stopEventFlag && _bRun)
 		{
-			pthread_cond_wait(&_condStopEvent, &_stopMutex);
+			std::unique_lock<std::mutex> lock(_stopMutex);
+			_condStopEvent.wait(lock, [this] { return _stopEventFlag || !_bRun; });
+			_stopEventFlag = false; // 重置停止事件标志
 		}
-		_stopEventFlag = false; // 重置停止事件标志
-		pthread_mutex_unlock(&_stopMutex);
 
 		if (!_bRun)
 		{
@@ -650,10 +633,11 @@ public:
 		_nPointCount = nPointCount;
 
 		// 设置事件，唤醒线程
-		pthread_mutex_lock(&_mutex);
-		_eventFlag = true;
-		pthread_cond_signal(&_condEvent);
-		pthread_mutex_unlock(&_mutex);
+		{
+			std::lock_guard<std::mutex> lock(_mutex);
+			_eventFlag = true;
+		}
+		_condEvent.notify_one();
 	}
 
 	void WaitComplete()
@@ -664,22 +648,21 @@ public:
 		}
 
 		// 等待停止事件（等待线程暂停）
-		pthread_mutex_lock(&_stopMutex);
-		while (!_stopEventFlag && _bRun)
 		{
-			pthread_cond_wait(&_condStopEvent, &_stopMutex);
+			std::unique_lock<std::mutex> lock(_stopMutex);
+			_condStopEvent.wait(lock, [this] { return _stopEventFlag || !_bRun; });
+			_stopEventFlag = false; // 重置停止事件标志
 		}
-		_stopEventFlag = false; // 重置停止事件标志
-		pthread_mutex_unlock(&_stopMutex);
 
 		// 设置停止标志
 		_bRun = false;
 
 		// 设置事件，唤醒线程
-		pthread_mutex_lock(&_mutex);
-		_eventFlag = true;
-		pthread_cond_signal(&_condEvent);
-		pthread_mutex_unlock(&_mutex);
+		{
+			std::lock_guard<std::mutex> lock(_mutex);
+			_eventFlag = true;
+		}
+		_condEvent.notify_one();
 
 		// 等待线程结束
 		join();
@@ -690,11 +673,11 @@ private:
 	I64 _nPointCount; // 当前数组已读取点数量
 	CPointCloudTool* _pLasFileProcess;
 
-	// Linux 平台同步原语
-	pthread_mutex_t _mutex;		   // 互斥锁，保护 _eventFlag
-	pthread_cond_t _condEvent;	   // 条件变量，对应 _hEvent
-	pthread_mutex_t _stopMutex;	   // 互斥锁，保护 _stopEventFlag
-	pthread_cond_t _condStopEvent; // 条件变量，对应 _hStopEvent
+	// C++ 标准库同步原语
+	std::mutex _mutex;				 // 互斥锁，保护 _eventFlag
+	std::condition_variable _condEvent;	   // 条件变量，对应 _hEvent
+	std::mutex _stopMutex;			 // 互斥锁，保护 _stopEventFlag
+	std::condition_variable _condStopEvent; // 条件变量，对应 _hStopEvent
 
 	bool _eventFlag;	 // 事件标志
 	bool _stopEventFlag; // 停止事件标志

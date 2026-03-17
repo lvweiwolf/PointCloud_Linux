@@ -21,9 +21,9 @@ static wchar_t* _cstrstr(const wchar_t* pStr, const wchar_t* pCharSet);
 // For an empty string, m_pchData will point here
 // (note: avoids special case of checking for NULL m_pchData)
 // empty string data (and locked)
-static int rgInitData[] = { -1, 0, 0, 0 };
+static long rgInitData[] = { -1, 0, 0, 0 };
 static CStringData* StrDataNil = (CStringData*)&rgInitData;
-static LPCWSTR StrPchNil = (LPCWSTR)(((byte*)&rgInitData) + sizeof(CStringData));
+static LPCWSTR StrPchNil = (LPCWSTR)(StrDataNil + 1);
 
 #define ROUND(x, y) (((x) + (y - 1)) & ~(y - 1))
 #define ROUND4(x) ROUND(x, 4)
@@ -95,6 +95,8 @@ CString::CString(const CString& stringSrc)
 	assert(stringSrc.GetData()->nRefs != 0);
 	if (stringSrc.GetData()->nRefs >= 0)
 	{
+		byte* data = (byte*)stringSrc.GetData();
+		byte* nildata = (byte*)StrDataNil;
 		assert(stringSrc.GetData() != StrDataNil);
 		m_pchData = stringSrc.m_pchData;
 		safe_inc((int*)&GetData()->nRefs);
@@ -308,7 +310,17 @@ const CString& CString::operator=(const CString& stringSrc)
 const CString& CString::operator=(LPCWSTR lpsz)
 {
 	assert(lpsz != NULL);
-	AssignCopy(SafeStrlen(lpsz), lpsz);
+
+	int nLength = SafeStrlen(lpsz);
+	if (nLength == 0)
+	{
+		Empty();
+	}
+	else
+	{
+		AssignCopy(nLength, lpsz);
+	}
+
 	return *this;
 }
 

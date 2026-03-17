@@ -24,8 +24,8 @@ std::map<char, bool> GetSegmentShowType()
 
 int main()
 {
-	CString strLasFile = L"/home/zhoujin/projects/Test/LAS/test1.las";
-	CString strProjectPath = L"/home/zhoujin/projects/Test/Project/test/";
+	CString strLasFile = _T("/home/lvwei/cloud/LAS/test1.las");
+	CString strProjectPath = _T("/home/lvwei/cloud/PROJECT/test1/");
 
 	CString strProjectID = L"test.xmdx";
 	CString strProjectFile = strProjectPath + strProjectID;

@@ -9,7 +9,7 @@
 # -----------------------------------------------------------------------------
 # 基本路径设置
 # -----------------------------------------------------------------------------
-# set(THIRDPART_ROOT "")
+set(THIRDPART_ROOT "" CACHE PATH "第三方库根目录")
 
 set(THIRDPART_INCLUDE_DIR "${THIRDPART_ROOT}/include")
 set(THIRDPART_LIB_DIR "${THIRDPART_ROOT}/lib")
@@ -366,17 +366,6 @@ macro(target_link_tbb target)
     target_link_libraries(${target} ${TBB_LIBRARY})
 endmacro()
 
-# =============================================================================
-# pugixml
-# =============================================================================
-set(pugixml_INCLUDE_DIR "${THIRDPART_INCLUDE_DIR}")
-set(pugixml_LIBRARY pugixml)
-set(pugixml_FOUND TRUE)
-
-macro(target_link_pugixml target)
-    target_include_directories(${target} PRIVATE ${pugixml_INCLUDE_DIR})
-    target_link_libraries(${target} ${pugixml_LIBRARY})
-endmacro()
 
 # =============================================================================
 # LASlib
@@ -509,8 +498,6 @@ macro(target_link_thirdpart target)
             target_link_flann(${target})
         elseif(_lib_lower STREQUAL "tbb")
             target_link_tbb(${target})
-        elseif(_lib_lower STREQUAL "pugixml")
-            target_link_pugixml(${target})
         elseif(_lib_lower STREQUAL "laslib")
             target_link_laslib(${target})
         elseif(_lib_lower STREQUAL "rapidjson")

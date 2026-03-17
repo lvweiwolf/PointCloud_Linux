@@ -30,6 +30,8 @@ find_package(OpenMP REQUIRED)
 
 find_package(Vulkan REQUIRED)
 
+find_package(pugixml REQUIRED)
+
 # 头文件搜索路径
 # include_directories(${PROJECT_SOURCE_DIR}/CommonTools)
 # include_directories(${PROJECT_SOURCE_DIR}/PointCloudSegmentation)

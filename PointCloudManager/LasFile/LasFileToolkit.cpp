@@ -2,6 +2,9 @@
 #include <LasFile/PointCloudTool.h>
 #include <LasFile/ExportLasTool.h>
 
+#include <include/BnsWrapper.h>
+
+
 // 存EPSG信息的Key值
 const U16 INT_SAVE_EPAG_KEY = 3072;
 
