@@ -5,10 +5,23 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Launch-Debug",
             "type": "lldb",
             "request": "launch",
-            "name": "Launch",
             "program": "${workspaceFolder}/out/build/linux-debug/bin/AppStarter",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "stopOnEntry": false,
+            "env":{
+                "LD_LIBRARY_PATH": "/home/lvwei/cloud/ThirdPart/lib:/home/lvwei/cloud/ThirdPart/lib64:$LD_LIBRARY_PATH"
+            },
+            "preLaunchTask": "CMake: 生成"
+        },
+        {
+            "name": "Launch-Release",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/out/build/linux-release/bin/AppStarter",
             "args": [],
             "cwd": "${workspaceFolder}",
             "stopOnEntry": false,

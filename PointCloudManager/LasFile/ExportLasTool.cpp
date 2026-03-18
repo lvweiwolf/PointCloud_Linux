@@ -21,7 +21,7 @@
 #define EPSG_LOCATION 0
 #define EPSG_KEY_COUNT 1
 #define LAS_TINY_RIGHT_MOVE 8
-#define	INT_SAVE_EPAG_KEY 3072
+#define INT_SAVE_EPAG_KEY 3072
 #define EXPORT_ALL INT16_MAX
 
 
@@ -31,26 +31,36 @@ class CDataGetter : public osg::NodeVisitor
 public:
 	struct SData
 	{
-		osg::ref_ptr<const osg::Vec3Array>		_pVertexArray;
-		osg::ref_ptr<const osg::Vec4ubArray>	_pColorArray;
-		osg::ref_ptr<osg::Vec2Array>				_pTexCoordArray;
-		osg::Matrix								_matrix;
+		osg::ref_ptr<const osg::Vec3Array> _pVertexArray;
+		osg::ref_ptr<const osg::Vec4ubArray> _pColorArray;
+		osg::ref_ptr<osg::Vec2Array> _pTexCoordArray;
+		osg::Matrix _matrix;
 	};
-	typedef std::map<osg::ref_ptr<const osg::Vec3Array>, std::pair<osg::ref_ptr<const osg::Vec4ubArray>, osg::Matrix>> DataMap;
-	CDataGetter(osg::NodeVisitor::TraversalMode traversalMode = osg::NodeVisitor::TRAVERSE_ALL_CHILDREN) :osg::NodeVisitor(traversalMode)
+	typedef std::map<osg::ref_ptr<const osg::Vec3Array>,
+					 std::pair<osg::ref_ptr<const osg::Vec4ubArray>, osg::Matrix>>
+		DataMap;
+	CDataGetter(
+		osg::NodeVisitor::TraversalMode traversalMode = osg::NodeVisitor::TRAVERSE_ALL_CHILDREN)
+		: osg::NodeVisitor(traversalMode)
 	{
 	}
 
 public:
 	void apply(osg::Geometry& geometry)
 	{
-		const osg::ref_ptr<osg::Vec3Array> pVertexArray = dynamic_cast<osg::Vec3Array*>(geometry.getVertexArray());
-		const osg::ref_ptr<osg::Vec4ubArray> pColorArray = dynamic_cast<osg::Vec4ubArray*>(geometry.getColorArray());
-		osg::ref_ptr<osg::Vec2Array> pTexCoordArray = dynamic_cast<osg::Vec2Array*>(geometry.getTexCoordArray(0));
+		const osg::ref_ptr<osg::Vec3Array> pVertexArray =
+			dynamic_cast<osg::Vec3Array*>(geometry.getVertexArray());
+		const osg::ref_ptr<osg::Vec4ubArray> pColorArray =
+			dynamic_cast<osg::Vec4ubArray*>(geometry.getColorArray());
+		osg::ref_ptr<osg::Vec2Array> pTexCoordArray =
+			dynamic_cast<osg::Vec2Array*>(geometry.getTexCoordArray(0));
 		if (nullptr == pVertexArray || nullptr == pColorArray || nullptr == pTexCoordArray)
 			return;
 
-		_pDataMap.push_back(SData{ pVertexArray , pColorArray , pTexCoordArray , osg::computeLocalToWorld(getNodePath()) });
+		_pDataMap.push_back(SData{ pVertexArray,
+								   pColorArray,
+								   pTexCoordArray,
+								   osg::computeLocalToWorld(getNodePath()) });
 	}
 
 	std::vector<SData> GetDataMap() { return _pDataMap; }
@@ -62,12 +72,9 @@ private:
 CExportLasTool::CExportLasTool(pc::data::CModelNodePtr pProjectNode, const CString& strOutPath)
 	: _pProjectNode(pProjectNode), _strOutPath(strOutPath)
 {
-
 }
 
-CExportLasTool::~CExportLasTool()
-{
-}
+CExportLasTool::~CExportLasTool() {}
 
 void CExportLasTool::ExportLas()
 {
@@ -83,23 +90,34 @@ void CExportLasTool::ExportLas()
 	CString strScanTime = bnsProject.GetScanTime();
 
 	std::vector<pc::data::CModelNodePtr> vAllPagedLods;
-	CPointCloudBoxQuery::GetLevelPagedLodList(_pProjectNode, CPointCloudBoxQuery::nAllLevel, vAllPagedLods);
+	CPointCloudBoxQuery::GetLevelPagedLodList(_pProjectNode,
+											  CPointCloudBoxQuery::nAllLevel,
+											  vAllPagedLods);
 
-	CString strFileName = _strOutPath + L"/分类点云.las";
+	CString strFileName = _strOutPath + L"/result.las";
+
+	if (CFileToolkit::FileExist(strFileName))
+		CFileToolkit::DeleteToRecycle(strFileName);
+
 	std::map<int, bool> errorMap;
 	ExportLasFileWithTime(vAllPagedLods, nEpsg, offsetXyz, strFileName, errorMap, strScanTime);
-
 }
 
-bool CExportLasTool::ExportLasFileWithTime(const std::vector<pc::data::CModelNodePtr>& pageLodList, 
-	const int& nEpsg, const osg::Vec3d& offsetXyz, const CString& strFileName, std::map<int, bool>& errorMap, 
-	CString& strScanTime, const bool& bByType /*= false*/, const std::map<int, CString> typeFileMap /*= std::map<int, CString>()*/, 
+bool CExportLasTool::ExportLasFileWithTime(
+	const std::vector<pc::data::CModelNodePtr>& pageLodList,
+	const int& nEpsg,
+	const osg::Vec3d& offsetXyz,
+	const CString& strFileName,
+	std::map<int, bool>& errorMap,
+	CString& strScanTime,
+	const bool& bByType /*= false*/,
+	const std::map<int, CString> typeFileMap /*= std::map<int, CString>()*/,
 	const std::vector<int>& vecType /*= std::vector<int>()*/)
 {
-	//d3s::CTimeLog timeRecord(_T("导出las文件耗时"));
+	// d3s::CTimeLog timeRecord(_T("导出las文件耗时"));
 	if (pageLodList.empty() || (bByType && typeFileMap.empty()))
 	{
-		//d3s::CLog::Error(_T("参数传递为空"));
+		// d3s::CLog::Error(_T("参数传递为空"));
 		return false;
 	}
 
@@ -118,7 +136,14 @@ bool CExportLasTool::ExportLasFileWithTime(const std::vector<pc::data::CModelNod
 
 	// 创建写las文件操作器
 	std::map<int, SLasWriterData> typeLasWriterMap;
-	if (!CreateTypeLasWriterWithTime(typeLasWriterMap, strFileName, bByType, typeFileMap, boundingBox, nEpsg, offsetXyz, strScanTime))
+	if (!CreateTypeLasWriterWithTime(typeLasWriterMap,
+									 strFileName,
+									 bByType,
+									 typeFileMap,
+									 boundingBox,
+									 nEpsg,
+									 offsetXyz,
+									 strScanTime))
 		return false;
 
 	// 读取pagedLod文件、写las文件
@@ -129,7 +154,7 @@ bool CExportLasTool::ExportLasFileWithTime(const std::vector<pc::data::CModelNod
 		osg::ref_ptr<osg::Node> pNode = CPointCloudToolkit::ReadNode(sPointInfoFile, sPointTexFile);
 		if (nullptr == pNode)
 		{
-			//d3s::CLog::Error(_T("%s读取失败"), strPageLodFile);
+			// d3s::CLog::Error(_T("%s读取失败"), strPageLodFile);
 			continue;
 		}
 
@@ -150,20 +175,35 @@ bool CExportLasTool::ExportLasFileWithTime(const std::vector<pc::data::CModelNod
 }
 
 
-bool CExportLasTool::CreateTypeLasWriterWithTime(std::map<int, SLasWriterData>& typeLasWriterMap, 
-	const CString& strFileName, const bool& bByType, const std::map<int, CString> typeFileMap, 
-	const osg::BoundingBox& boundingBox, const int& nEpsg, const osg::Vec3d& offsetXyz, CString& strScanTime)
+bool CExportLasTool::CreateTypeLasWriterWithTime(std::map<int, SLasWriterData>& typeLasWriterMap,
+												 const CString& strFileName,
+												 const bool& bByType,
+												 const std::map<int, CString> typeFileMap,
+												 const osg::BoundingBox& boundingBox,
+												 const int& nEpsg,
+												 const osg::Vec3d& offsetXyz,
+												 CString& strScanTime)
 {
 	if (!bByType)
 	{
 		auto strFilePath = CFileToolkit::GetFileDirectory(strFileName);
 		if (!CFileToolkit::DirectoryExist(strFilePath))
 			CFileToolkit::CreateDirectory(strFilePath);
-		CreateFileHandleWithTime(typeLasWriterMap[EXPORT_ALL]._lasWriteOpener, typeLasWriterMap[EXPORT_ALL]._header, boundingBox, strFileName, nEpsg, offsetXyz, strScanTime);
-		if (!CreateWriteOperator(typeLasWriterMap[EXPORT_ALL]._lasWriteOpener, typeLasWriterMap[EXPORT_ALL]._header, typeLasWriterMap[EXPORT_ALL]._pLaswriter
-			, typeLasWriterMap[EXPORT_ALL]._laspoint))
+		
+		CreateFileHandleWithTime(typeLasWriterMap[EXPORT_ALL]._lasWriteOpener,
+								 typeLasWriterMap[EXPORT_ALL]._header,
+								 boundingBox,
+								 strFileName,
+								 nEpsg,
+								 offsetXyz,
+								 strScanTime);
+		
+		if (!CreateWriteOperator(typeLasWriterMap[EXPORT_ALL]._lasWriteOpener,
+								 typeLasWriterMap[EXPORT_ALL]._header,
+								 typeLasWriterMap[EXPORT_ALL]._pLaswriter,
+								 typeLasWriterMap[EXPORT_ALL]._laspoint))
 		{
-			//d3s::CLog::Error(_T("写las文件操作器创建失败"));
+			// d3s::CLog::Error(_T("写las文件操作器创建失败"));
 			return false;
 		}
 		return true;
@@ -174,11 +214,19 @@ bool CExportLasTool::CreateTypeLasWriterWithTime(std::map<int, SLasWriterData>& 
 		auto strFilePath = CFileToolkit::GetFileDirectory(iter.second);
 		if (!CFileToolkit::DirectoryExist(strFilePath))
 			CFileToolkit::CreateDirectory(strFilePath);
-		CreateFileHandleWithTime(typeLasWriterMap[iter.first]._lasWriteOpener, typeLasWriterMap[iter.first]._header, boundingBox, iter.second, nEpsg, offsetXyz, strScanTime);
-		if (!CreateWriteOperator(typeLasWriterMap[iter.first]._lasWriteOpener, typeLasWriterMap[iter.first]._header, typeLasWriterMap[iter.first]._pLaswriter
-			, typeLasWriterMap[iter.first]._laspoint))
+		CreateFileHandleWithTime(typeLasWriterMap[iter.first]._lasWriteOpener,
+								 typeLasWriterMap[iter.first]._header,
+								 boundingBox,
+								 iter.second,
+								 nEpsg,
+								 offsetXyz,
+								 strScanTime);
+		if (!CreateWriteOperator(typeLasWriterMap[iter.first]._lasWriteOpener,
+								 typeLasWriterMap[iter.first]._header,
+								 typeLasWriterMap[iter.first]._pLaswriter,
+								 typeLasWriterMap[iter.first]._laspoint))
 		{
-			//d3s::CLog::Error(_T("写las文件操作器创建失败"));
+			// d3s::CLog::Error(_T("写las文件操作器创建失败"));
 			return false;
 		}
 	}
@@ -186,8 +234,13 @@ bool CExportLasTool::CreateTypeLasWriterWithTime(std::map<int, SLasWriterData>& 
 }
 
 
-void CExportLasTool::CreateFileHandleWithTime(LASwriteOpener& lasWriteOpener, LASheader& header,
-	const osg::BoundingBox& boundingBox, const CString& strFileName, const int nEpsg, const osg::Vec3d& offsetXyz, CString& strScanTime)
+void CExportLasTool::CreateFileHandleWithTime(LASwriteOpener& lasWriteOpener,
+											  LASheader& header,
+											  const osg::BoundingBox& boundingBox,
+											  const CString& strFileName,
+											  const int nEpsg,
+											  const osg::Vec3d& offsetXyz,
+											  CString& strScanTime)
 {
 	lasWriteOpener.set_file_name(CStringToolkit::CStringToUTF8(strFileName).c_str());
 	header.x_scale_factor = SCALE_FACTOR;
@@ -201,22 +254,30 @@ void CExportLasTool::CreateFileHandleWithTime(LASwriteOpener& lasWriteOpener, LA
 
 	// 导出点云记录公司名称
 	strcpy(header.generating_software, "BOOWAY");
-	header.set_bounding_box(boundingBox.xMin() + offsetXyz.x(), boundingBox.yMin() + offsetXyz.y(), boundingBox.zMin() + offsetXyz.z(),
-		boundingBox.xMax() + offsetXyz.x(), boundingBox.yMax() + offsetXyz.y(), boundingBox.zMax() + offsetXyz.z());
+	header.set_bounding_box(boundingBox.xMin() + offsetXyz.x(),
+							boundingBox.yMin() + offsetXyz.y(),
+							boundingBox.zMin() + offsetXyz.z(),
+							boundingBox.xMax() + offsetXyz.x(),
+							boundingBox.yMax() + offsetXyz.y(),
+							boundingBox.zMax() + offsetXyz.z());
 	SetGeotiff(&header, nEpsg);
-	//导出点云扫描时间
+	// 导出点云扫描时间
 	SetSacnTime(&header, strScanTime);
 }
 
-bool CExportLasTool::CreateWriteOperator(LASwriteOpener& lasWriteOpener, LASheader& header, LASwriter*& pLaswriter, LASpoint& laspoint)
+bool CExportLasTool::CreateWriteOperator(LASwriteOpener& lasWriteOpener,
+										 LASheader& header,
+										 LASwriter*& pLaswriter,
+										 LASpoint& laspoint)
 {
 	pLaswriter = lasWriteOpener.open(&header);
 	if (nullptr == pLaswriter)
 	{
-		//d3s::CLog::Warn(_T("laswriteopener.open()失败"));
+		// d3s::CLog::Warn(_T("laswriteopener.open()失败"));
 		return false;
 	}
-	return BOOL(0) != laspoint.init(&header, header.point_data_format, header.point_data_record_length);
+	return BOOL(0) !=
+		   laspoint.init(&header, header.point_data_format, header.point_data_record_length);
 }
 
 void CExportLasTool::SetGeotiff(LASheader* pHeader, const int nEpsg)
@@ -251,9 +312,9 @@ void CExportLasTool::SetGeotiff(LASheader* pHeader, const int nEpsg)
 	{
 
 		projection_was_set = convertor->GetGeoKeysFromProjection(number_of_keys,
-			&geo_keys,
-			num_geo_double_params,
-			&geo_double_params);
+																 &geo_keys,
+																 num_geo_double_params,
+																 &geo_double_params);
 	}
 
 	if (!projection_was_set)
@@ -286,14 +347,18 @@ void CExportLasTool::SetSacnTime(LASheader* pHeader, CString& strScanTime)
 		auto now = std::chrono::system_clock::now();
 		std::time_t t = std::chrono::system_clock::to_time_t(now);
 		std::tm* local = std::localtime(&t);
-		if (local) {
+		if (local)
+		{
 			y = local->tm_year + 1900;
 			m = local->tm_mon + 1;
 			d = local->tm_mday;
 		}
-		else {
+		else
+		{
 			// 如果 localtime 失败，fallback 到默认值
-			y = 1970; m = 1; d = 1;
+			y = 1970;
+			m = 1;
+			d = 1;
 		}
 	}
 
@@ -313,8 +378,12 @@ void CExportLasTool::SetSacnTime(LASheader* pHeader, CString& strScanTime)
 
 
 
-void CExportLasTool::WriteLas(osg::Node* pNode, const bool& bByType, std::map<int, SLasWriterData>& typeLasWriterMap,
-	const std::vector<int>& vecType, std::map<int, bool>& errorMap, const osg::Vec3d& offsetXyz)
+void CExportLasTool::WriteLas(osg::Node* pNode,
+							  const bool& bByType,
+							  std::map<int, SLasWriterData>& typeLasWriterMap,
+							  const std::vector<int>& vecType,
+							  std::map<int, bool>& errorMap,
+							  const osg::Vec3d& offsetXyz)
 {
 	if (nullptr == pNode)
 		return;
@@ -340,13 +409,13 @@ void CExportLasTool::WriteLas(osg::Node* pNode, const bool& bByType, std::map<in
 		const osg::Matrix& matrix = iter._matrix;
 		if (nullptr == pVertexArray || nullptr == pColorArray || nullptr == pTexCoordArray)
 		{
-			//d3s::CLog::Warn(_T("顶点、颜色或者纹理指针为空"));
+			// d3s::CLog::Warn(_T("顶点、颜色或者纹理指针为空"));
 			continue;
 		}
 		size_t nCount = pVertexArray->size();
 		if (nCount != pColorArray->size() || nCount != pTexCoordArray->size())
 		{
-			//d3s::CLog::Warn(_T("顶点数量与颜色数量或者分类数量不同"));
+			// d3s::CLog::Warn(_T("顶点数量与颜色数量或者分类数量不同"));
 			continue;
 		}
 
@@ -366,7 +435,7 @@ void CExportLasTool::WriteLas(osg::Node* pNode, const bool& bByType, std::map<in
 				pLaspoint = &(iter->second._laspoint);
 				errorMap[nType] = true;
 			}
-			else if (!vecType.empty())	//如果外部传入类型则检测
+			else if (!vecType.empty()) // 如果外部传入类型则检测
 			{
 				auto iter = std::find(vecType.begin(), vecType.end(), nType);
 				if (vecType.end() == iter)
@@ -377,15 +446,20 @@ void CExportLasTool::WriteLas(osg::Node* pNode, const bool& bByType, std::map<in
 			const osg::Vec4ub& color = (*pColorArray)[i];
 			if (!WritePointInfo(point, color, offsetXyz, nType, pLaswriter, *pLaspoint))
 			{
-				//d3s::CLog::Warn(_T("[PointCloudWriter::PointCloudWriter] 写入第 %d 个点时，发生错误"), i);
+				// d3s::CLog::Warn(_T("[PointCloudWriter::PointCloudWriter] 写入第 %d
+				// 个点时，发生错误"), i);
 				break;
 			}
 		}
 	}
 }
 
-bool CExportLasTool::WritePointInfo(const osg::Vec3d& point, const osg::Vec4ub& color, const osg::Vec3d& offsetXyz, uint32_t nType
-	, LASwriter* pLaswriter, LASpoint& laspoint)
+bool CExportLasTool::WritePointInfo(const osg::Vec3d& point,
+									const osg::Vec4ub& color,
+									const osg::Vec3d& offsetXyz,
+									uint32_t nType,
+									LASwriter* pLaswriter,
+									LASpoint& laspoint)
 {
 	if (nullptr == pLaswriter)
 		return false;

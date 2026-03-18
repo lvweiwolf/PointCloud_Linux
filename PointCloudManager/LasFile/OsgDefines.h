@@ -8,31 +8,8 @@
 #include <include/ModelNode.h>
 
 #include <pcl/common/common.h>
-// #include <pcl/common/distances.h>
-// #include <pcl/io/pcd_io.h>
-// #include <pcl/point_types.h>
-// #include <pcl/impl/point_types.hpp>
-// // #include <pcl/visualization/cloud_viewer.h>
-// #include <pcl/ModelCoefficients.h>
-// #include <pcl/point_types.h>
-// #include <pcl/io/pcd_io.h>
-// #include <pcl/filters/extract_indices.h>
-// #include <pcl/filters/voxel_grid.h>
-// // #include <pcl/features/normal_3d.h>
-// #include <pcl/kdtree/kdtree.h>
-// #include <pcl/sample_consensus/method_types.h>
-// #include <pcl/sample_consensus/model_types.h>
-// #include <pcl/segmentation/sac_segmentation.h>
-// #include <pcl/segmentation/extract_clusters.h>
-// #include <pcl/kdtree/kdtree_flann.h>
-// #include <pcl/common/impl/angles.hpp>
-// #include <pcl/filters/crop_box.h>
-// #include <pcl/io/pcd_io.h>
-// #include <pcl/point_types.h>
-// // #include <pcl/registration/icp.h>
 
-// #include <pcl/filters/voxel_grid.h>
-// #include <pcl/search/flann_search.h>
+#include <tbb/mutex.h>
 
 
 #define EPSILON 10e-6
@@ -140,6 +117,8 @@ namespace LasOsg {
 		int nHeight;
 		double nScale; // 当前块采样比例
 		int nLevel;	   // 当前块所属层级
+
+		tbb::mutex mtx;
 	};
 }
 

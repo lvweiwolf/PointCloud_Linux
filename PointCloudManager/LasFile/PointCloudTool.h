@@ -15,6 +15,8 @@
 #include <BusinessNode/BnsProjectNode.h>
 #include <BusinessNode/BnsPointCloudNode.h>
 
+class CPointCloudWriteThread;
+
 class CPointCloudTool
 {
 	const int nLevel = 4; // 共拆分为4级
@@ -31,7 +33,7 @@ class CPointCloudTool
 		float _fPageLodMaxPixel; // pageLod最大显示像素
 
 		std::vector<d3s::share_ptr<LasOsg::PieceInfo>> _PieceInfoVec; // 最小层级PieceInfo
-		std::vector<MoudelInfo> _LevelMoudelInfoVec; // Level模型信息记录集合
+		std::vector<MoudelInfo> _LevelMoudelInfoVec;				  // Level模型信息记录集合
 
 		SLevelInfo()
 		{
@@ -151,7 +153,7 @@ protected:
 	 * @return
 	 */
 	void PointToPieceProcess();
-	void PointToPieceProcessTwo();
+	void PointToPieceProcess2();
 
 	/**
 	 * 读取点
@@ -281,6 +283,8 @@ protected:
 	int _nStartZ;	   // lasZ最小
 
 	std::map<unsigned, unsigned> _typeMapping;
+
+	CPointCloudWriteThread *_writeFileThread; // 写文件线程
 };
 
 #endif // POINTCLOUDTOOL_H_

@@ -48,7 +48,7 @@ namespace d3s {
 				}
 				else
 				{
-					PCS_WARN("[PointCloudWriter] ��֧�ֵ����ݸ�ʽ.");
+					PCS_WARN("[PointCloudWriter] 不支持的数据格式.");
 					return false;
 				}
 			}
@@ -62,7 +62,7 @@ namespace d3s {
 				LASwriteOpener laswriteopener;
 				laswriteopener.set_file_name(_filename.c_str());
 
-				// ����ֲ���Χ��
+				// 计算局部包围盒
 				osg::BoundingBox bbox;
 				computeMinMax3D(pcv, indices, bbox);
 
@@ -126,7 +126,7 @@ namespace d3s {
 						header.del_geo_ascii_params();
 					}
 				}
-				// �������Ƽ�¼��˾����
+				// 导出点云记录公司名称
 				strcpy(header.generating_software, "BOOWAY");
 				LASwriter* laswriter = laswriteopener.open(&header);
 
@@ -139,7 +139,7 @@ namespace d3s {
 
 				if (!laswriter)
 				{
-					PCS_ERROR("[PointCloudWriter::PointCloudWriter] �޷�д���ļ� '%s'.",
+					PCS_ERROR("[PointCloudWriter::PointCloudWriter] 无法写入文件 '%s'.",
 							  _filename.c_str());
 
 					return false;
@@ -158,14 +158,15 @@ namespace d3s {
 					laspoint.set_R(p.r);
 					laspoint.set_G(p.g);
 					laspoint.set_B(p.b);
-					// 558136 ������ã���������𳬹�3�֣���3�ּ����ϵ�����޷�������ʾ����ͼ��
-					// ��ͼV1.6.0.19
+					// 558136 类别设置：新增的类别超过3种，第3种及以上的类别无法单独显示在视图中
+					// 附图V1.6.0.19
 					laspoint.set_user_data(p.label);
 
 					if (!laswriter->write_point(&laspoint))
 					{
-						PCS_ERROR("[PointCloudWriter::PointCloudWriter] д��� %d ����ʱ����������.",
-								  i);
+						PCS_ERROR(
+							"[PointCloudWriter::PointCloudWriter] 写入第 %d 个点时，发生错误.",
+							i);
 
 						writeComplete = false;
 

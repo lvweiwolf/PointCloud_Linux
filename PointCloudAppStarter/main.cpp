@@ -3,6 +3,7 @@
 
 #include <cstdio>
 #include <vector>
+#include <chrono>
 
 std::map<char, bool> GetSegmentShowType()
 {
@@ -24,8 +25,8 @@ std::map<char, bool> GetSegmentShowType()
 
 int main()
 {
-	CString strLasFile = _T("/home/lvwei/cloud/LAS/test1.las");
-	CString strProjectPath = _T("/home/lvwei/cloud/PROJECT/test1/");
+	CString strLasFile = _T("/home/lvwei/cloud/temp/test2.las");
+	CString strProjectPath = _T("/home/lvwei/cloud/temp/projects/");
 
 	CString strProjectID = L"test.xmdx";
 	CString strProjectFile = strProjectPath + strProjectID;
@@ -42,9 +43,17 @@ int main()
 	if (bnsProject.IsNull())
 		return 0;
 
+
 	/*2.导入las文件*/
+	auto start = std::chrono::steady_clock::now();
+
 	CLasFileToolkit::ImportLasFile({ strLasFile }, bnsProject, strProjectPath);
 
+	auto end = std::chrono::steady_clock::now();
+	auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+	std::cout << "ImportLasFile() cost: " << elapsed_ms.count() << " ms" << std::endl;
+
+#if 0
 	/*3.保存工程文件*/
 	CProjectManagerTool::SaveProject(strProjectFile, bnsProject);
 
@@ -68,6 +77,8 @@ int main()
 	 "/home/whm/test.ini"; d3s::pcs::IOptions* opt = d3s::pcs::CreateOptions(strOptionPath.c_str());
 	 std::vector<d3s::pcs::PointId> result;
 	 seg->Segment(opt, result);*/
+
+#endif
 
 	printf("%s 向你问好!\n", "ConsoleApplicationTestSeg");
 	return 0;

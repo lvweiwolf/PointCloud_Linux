@@ -2,6 +2,7 @@
 #include <LasFile/PointCloudPageLod.h>
 #include <LasFile/PointCloudPropertyTool.h>
 #include <LasFile/PointCloudToolkit.h>
+#include <LasFile/PointProcessThread.h>
 
 #include <BusinessNode/PCNodeType.h>
 #include <BusinessNode/BnsPointCloudNode.h>
@@ -16,9 +17,6 @@
 
 #include <pcl/io/pcd_io.h>
 #include <pcl/octree/octree_pointcloud.h>
-
-#include <mutex>
-#include <condition_variable>
 
 
 #define PieceTwoSize 1000.00
@@ -81,7 +79,8 @@ CPointCloudTool::CPointCloudTool(const CString& strLasFilePath,
 	  _strOutPath(strOutPath),
 	  _bShuZiLvDiLas(false),
 	  _bBoowayLas(false),
-	  _dOffSetZ(0.0)
+	  _dOffSetZ(0.0),
+	  _writeFileThread(nullptr)
 {
 	_nStartX = 0;
 	_nStartY = 0;
@@ -104,6 +103,10 @@ void CPointCloudTool::LoadLas()
 	FileOpen();
 	GetScanTime();
 
+	// 启动写文件线程
+	_writeFileThread = new CPointCloudWriteThread();
+	_writeFileThread->start();
+
 	pc::data::CModelNodePtr pPageLod = Las2Osgb();
 	if (nullptr == pPageLod)
 		return;
@@ -125,6 +128,10 @@ void CPointCloudTool::LoadLas()
 	bnsProject.InsertPointCloudNode(pPageLod);
 
 	bnsProject.setBasePos(_centerPoint);
+
+	// 等待写文件结束，销毁线程
+	_writeFileThread->WaitComplete();
+	SAFE_DELETE(_writeFileThread);
 }
 
 void CPointCloudTool::FileOpen()
@@ -281,8 +288,7 @@ pc::data::CModelNodePtr CPointCloudTool::Las2Osgb()
 	currentPieceRoot->maxPoint = maxPoint;
 	CreateLasAllPiece(currentPieceRoot, Max_x, Max_y, Max_z, Min_x, Min_y, Min_z);
 
-	// 遍历处理所有点
-	PointToPieceProcessTwo();
+	PointToPieceProcess();
 
 	return BuildAllPageLod(currentPieceRoot);
 }
@@ -513,45 +519,35 @@ void CPointCloudTool::CreateLasAllPiece(d3s::share_ptr<LasOsg::PieceInfo> thisPi
 	}
 }
 
-
-void CPointCloudTool::PointToPieceProcess()
-{
-	I64 nPointCount = 0;
-	I64 nArrPointIndex = 0;
-	// 创建两片内存区域读取las文件信息
-	pcl::PointXYZRGBA* arrPoint1 = new pcl::PointXYZRGBA[MAX_MEMORY_POINT_NUM];
-	pcl::PointXYZRGBA* arrPoint2 = new pcl::PointXYZRGBA[MAX_MEMORY_POINT_NUM];
-	pcl::PointXYZRGBA* arrPoint = arrPoint1;
-	pcl::PointXYZRGBA point;
-	while (ReadPoint(point, _centerPoint.x(), _centerPoint.y(), _centerPoint.z(), true))
-	{
-		arrPoint[nArrPointIndex] = point;
-		++nPointCount;
-	}
-
-	for (size_t nIndex = 0; nIndex < nPointCount; ++nIndex)
-	{
-		SavePoinToPieceInfo(arrPoint[nIndex], nIndex);
-	}
-
-	// 释放数组
-	delete[] arrPoint1;
-	delete[] arrPoint2;
-}
-
 // 点到切片处理线程
 class CPointToPieceProcessThread : public OpenThreads::Thread
 {
 public:
 	CPointToPieceProcessThread(CPointCloudTool* pLasFileProcess)
-		: _curArrPoint(nullptr), _pLasFileProcess(pLasFileProcess),
-		  _eventFlag(false), _stopEventFlag(false), _bRun(true)
+		: _curArrPoint(nullptr), _pLasFileProcess(pLasFileProcess)
 	{
+		// 初始化互斥锁和条件变量
+		pthread_mutex_init(&_mutex, nullptr);
+		pthread_cond_init(&_condEvent, nullptr);
+		pthread_mutex_init(&_stopMutex, nullptr);
+		pthread_cond_init(&_condStopEvent, nullptr);
+
+		// 初始化标志
+		_eventFlag = false;
+		_stopEventFlag = false;
+
+		_bRun = true;
 	};
 
 	~CPointToPieceProcessThread()
 	{
 		WaitComplete();
+
+		// 销毁互斥锁和条件变量
+		pthread_mutex_destroy(&_mutex);
+		pthread_cond_destroy(&_condEvent);
+		pthread_mutex_destroy(&_stopMutex);
+		pthread_cond_destroy(&_condStopEvent);
 	};
 
 	virtual void run(void) override
@@ -559,26 +555,28 @@ public:
 		while (_bRun)
 		{
 			// 设置停止事件（通知主线程已暂停）
-			{
-				std::lock_guard<std::mutex> lock(_stopMutex);
-				_stopEventFlag = true;
-			}
-			_condStopEvent.notify_one();
+			pthread_mutex_lock(&_stopMutex);
+			_stopEventFlag = true;
+			pthread_cond_signal(&_condStopEvent);
+			pthread_mutex_unlock(&_stopMutex);
 
 			// 等待事件（等待主线程设置新数据）
+			pthread_mutex_lock(&_mutex);
+			while (!_eventFlag && _bRun)
 			{
-				std::unique_lock<std::mutex> lock(_mutex);
-				_condEvent.wait(lock, [this] { return _eventFlag || !_bRun; });
-
-				// 检查是否需要退出
-				if (!_bRun)
-				{
-					break; // 退出线程
-				}
-
-				// 重置事件标志
-				_eventFlag = false;
+				pthread_cond_wait(&_condEvent, &_mutex);
 			}
+
+			// 检查是否需要退出
+			if (!_bRun)
+			{
+				pthread_mutex_unlock(&_mutex);
+				break; // 退出线程
+			}
+
+			// 重置事件标志
+			_eventFlag = false;
+			pthread_mutex_unlock(&_mutex);
 
 			// 处理数据
 			ProcessPointData();
@@ -618,11 +616,13 @@ public:
 	void SetArrPoint(pcl::PointXYZRGBA* pArrPoint, I64 nPointCount)
 	{
 		// 等待停止事件（等待线程暂停）
+		pthread_mutex_lock(&_stopMutex);
+		while (!_stopEventFlag && _bRun)
 		{
-			std::unique_lock<std::mutex> lock(_stopMutex);
-			_condStopEvent.wait(lock, [this] { return _stopEventFlag || !_bRun; });
-			_stopEventFlag = false; // 重置停止事件标志
+			pthread_cond_wait(&_condStopEvent, &_stopMutex);
 		}
+		_stopEventFlag = false; // 重置停止事件标志
+		pthread_mutex_unlock(&_stopMutex);
 
 		if (!_bRun)
 		{
@@ -633,11 +633,10 @@ public:
 		_nPointCount = nPointCount;
 
 		// 设置事件，唤醒线程
-		{
-			std::lock_guard<std::mutex> lock(_mutex);
-			_eventFlag = true;
-		}
-		_condEvent.notify_one();
+		pthread_mutex_lock(&_mutex);
+		_eventFlag = true;
+		pthread_cond_signal(&_condEvent);
+		pthread_mutex_unlock(&_mutex);
 	}
 
 	void WaitComplete()
@@ -648,21 +647,22 @@ public:
 		}
 
 		// 等待停止事件（等待线程暂停）
+		pthread_mutex_lock(&_stopMutex);
+		while (!_stopEventFlag && _bRun)
 		{
-			std::unique_lock<std::mutex> lock(_stopMutex);
-			_condStopEvent.wait(lock, [this] { return _stopEventFlag || !_bRun; });
-			_stopEventFlag = false; // 重置停止事件标志
+			pthread_cond_wait(&_condStopEvent, &_stopMutex);
 		}
+		_stopEventFlag = false; // 重置停止事件标志
+		pthread_mutex_unlock(&_stopMutex);
 
 		// 设置停止标志
 		_bRun = false;
 
 		// 设置事件，唤醒线程
-		{
-			std::lock_guard<std::mutex> lock(_mutex);
-			_eventFlag = true;
-		}
-		_condEvent.notify_one();
+		pthread_mutex_lock(&_mutex);
+		_eventFlag = true;
+		pthread_cond_signal(&_condEvent);
+		pthread_mutex_unlock(&_mutex);
 
 		// 等待线程结束
 		join();
@@ -673,11 +673,11 @@ private:
 	I64 _nPointCount; // 当前数组已读取点数量
 	CPointCloudTool* _pLasFileProcess;
 
-	// C++ 标准库同步原语
-	std::mutex _mutex;				 // 互斥锁，保护 _eventFlag
-	std::condition_variable _condEvent;	   // 条件变量，对应 _hEvent
-	std::mutex _stopMutex;			 // 互斥锁，保护 _stopEventFlag
-	std::condition_variable _condStopEvent; // 条件变量，对应 _hStopEvent
+	// Linux 平台同步原语
+	pthread_mutex_t _mutex;		   // 互斥锁，保护 _eventFlag
+	pthread_cond_t _condEvent;	   // 条件变量，对应 _hEvent
+	pthread_mutex_t _stopMutex;	   // 互斥锁，保护 _stopEventFlag
+	pthread_cond_t _condStopEvent; // 条件变量，对应 _hStopEvent
 
 	bool _eventFlag;	 // 事件标志
 	bool _stopEventFlag; // 停止事件标志
@@ -685,18 +685,25 @@ private:
 };
 
 
-void CPointCloudTool::PointToPieceProcessTwo()
+void CPointCloudTool::PointToPieceProcess()
 {
+	// 遍历处理所有点
+	auto start = std::chrono::steady_clock::now();
+
 	// 遍历点云
-	CPointToPieceProcessThread* pProcessThread = new CPointToPieceProcessThread(this);
+	// CPointToPieceProcessThread* pProcessThread = new CPointToPieceProcessThread(this);
+	CSavePieceProcessThread* pProcessThread = new CSavePieceProcessThread(this);
 	pProcessThread->start();
+
 	I64 nPointCount = 0;
 	I64 nArrPointIndex = 0;
+
 	// 创建两片内存区域读取las文件信息
 	pcl::PointXYZRGBA* arrPoint1 = new pcl::PointXYZRGBA[MAX_MEMORY_POINT_NUM];
 	pcl::PointXYZRGBA* arrPoint2 = new pcl::PointXYZRGBA[MAX_MEMORY_POINT_NUM];
 	pcl::PointXYZRGBA* arrPoint = arrPoint1;
 	pcl::PointXYZRGBA point;
+
 	while (ReadPoint(point, _centerPoint.x(), _centerPoint.y(), _centerPoint.z(), true))
 	{
 		nArrPointIndex = nPointCount % MAX_MEMORY_POINT_NUM; // 数组中的索引值
@@ -717,6 +724,9 @@ void CPointCloudTool::PointToPieceProcessTwo()
 		}
 		arrPoint[nArrPointIndex] = point;
 		++nPointCount;
+
+		if (nPointCount % 1000000 == 0)
+			std::cout << "[Main] 读取 " << 1000000 << " points" << std::endl;
 	}
 
 	// 数组的末尾处理
@@ -728,6 +738,10 @@ void CPointCloudTool::PointToPieceProcessTwo()
 	// 释放数组
 	delete[] arrPoint1;
 	delete[] arrPoint2;
+
+	auto end = std::chrono::steady_clock::now();
+	auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+	std::cout << "PointToPieceProcess() cost: " << elapsed_ms.count() << " ms" << std::endl;
 }
 
 bool CPointCloudTool::ReadPoint(pcl::PointXYZRGBA& point,
@@ -836,22 +850,26 @@ void CPointCloudTool::SavePoinToPieceInfo(pcl::PointXYZRGBA& pointXYZRGBA, const
 	}
 	else
 	{
+		tbb::mutex::scoped_lock lock(pPiece->mtx);
 		pPiece->cloudPt->push_back(pointXYZRGBA);
+
 		// 第三层级点不执行每满50万构建一个pagedlod节点
 		if (pPiece->cloudPt->size() == PIECE_SAVE_NUM &&
 			nLevelIndex != EPageLodLevel::eWideLevelPageLod)
 		{
 			WritePCDFile(pPiece.get());
+
+			pPiece->cloudPt = CloudPtr(new pcl::PointCloud<pcl::PointXYZRGBA>());
+			pPiece->cloudPt->reserve(RESERVE);
 		}
 	}
 }
 
 void CPointCloudTool::WritePCDFile(d3s::share_ptr<LasOsg::PieceInfo> pPiece)
 {
-	auto cloudPt = pPiece->cloudPt;
-	int nCount = pPiece->cloudPt->size();
 	if (nullptr == pPiece || nullptr == pPiece->cloudPt || pPiece->cloudPt->size() == 0)
 		return;
+
 	int nIndex = pPiece->nIdex;
 	pPiece->nIdex = pPiece->nIdex + 1;
 	CString strPCD;
@@ -866,10 +884,9 @@ void CPointCloudTool::WritePCDFile(d3s::share_ptr<LasOsg::PieceInfo> pPiece)
 	std::string finame = CStringToolkit::CStringToUTF8(strActFile);
 
 	pcl::io::savePCDFileBinary(finame, *pPiece->cloudPt);
+	// _writeFileThread->AddTask(finame, pPiece->cloudPt);
 
 	pPiece->allPCDFilePath.emplace_back(finame);
-	pPiece->cloudPt = CloudPtr(new pcl::PointCloud<pcl::PointXYZRGBA>());
-	pPiece->cloudPt->reserve(RESERVE);
 }
 
 pc::data::CModelNodePtr CPointCloudTool::BuildAllPageLod(d3s::share_ptr<LasOsg::PieceInfo> pPiece)
@@ -1039,6 +1056,7 @@ void CPointCloudTool::BuildPageLodInfo(d3s::share_ptr<LasOsg::PieceInfo> pPiece)
 		pPageLod.SetPointsNum(nPointCnt);
 		ExcuteWriteOsgTask(writeTask);
 		{
+			tbb::mutex::scoped_lock lock(pPiece->mtx);
 			pPiece->pFatherPiece->childpagedLodPrtvec.push_back(pPageLod);
 		}
 

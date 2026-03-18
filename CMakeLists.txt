@@ -32,6 +32,8 @@ find_package(Vulkan REQUIRED)
 
 find_package(pugixml REQUIRED)
 
+find_package(TBB REQUIRED)
+
 # 头文件搜索路径
 # include_directories(${PROJECT_SOURCE_DIR}/CommonTools)
 # include_directories(${PROJECT_SOURCE_DIR}/PointCloudSegmentation)

@@ -37,6 +37,7 @@ target_include_directories(PointCloudManager PUBLIC
 target_link_libraries(PointCloudManager PUBLIC 
 	OpenMP::OpenMP_CXX 
 	Vulkan::Vulkan
+	TBB::tbb
 	CommonTools 
 	PointCloudSegmentation 
 	
