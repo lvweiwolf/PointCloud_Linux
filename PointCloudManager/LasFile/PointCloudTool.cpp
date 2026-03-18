@@ -288,7 +288,7 @@ pc::data::CModelNodePtr CPointCloudTool::Las2Osgb()
 	currentPieceRoot->maxPoint = maxPoint;
 	CreateLasAllPiece(currentPieceRoot, Max_x, Max_y, Max_z, Min_x, Min_y, Min_z);
 
-	PointToPieceProcess();
+	ProcessPointToPiece();
 
 	return BuildAllPageLod(currentPieceRoot);
 }
@@ -685,7 +685,7 @@ private:
 };
 
 
-void CPointCloudTool::PointToPieceProcess()
+void CPointCloudTool::ProcessPointToPiece()
 {
 	// 遍历处理所有点
 	auto start = std::chrono::steady_clock::now();

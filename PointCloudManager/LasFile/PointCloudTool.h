@@ -152,8 +152,8 @@ protected:
 	 * @param [in] lasreader
 	 * @return
 	 */
-	void PointToPieceProcess();
-	void PointToPieceProcess2();
+	void ProcessPointToPiece();
+	void ProcessPointToPiece2();
 
 	/**
 	 * 读取点
