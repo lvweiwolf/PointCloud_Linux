@@ -725,8 +725,8 @@ void CPointCloudTool::ProcessPointToPiece()
 		arrPoint[nArrPointIndex] = point;
 		++nPointCount;
 
-		if (nPointCount % 1000000 == 0)
-			std::cout << "[Main] 读取 " << 1000000 << " points" << std::endl;
+		// if (nPointCount % 1000000 == 0)
+		// 	std::cout << "[Main] 读取 " << 1000000 << " points" << std::endl;
 	}
 
 	// 数组的末尾处理
@@ -865,6 +865,99 @@ void CPointCloudTool::SavePoinToPieceInfo(pcl::PointXYZRGBA& pointXYZRGBA, const
 	}
 }
 
+void CPointCloudTool::CollectPointToLocalBuffer(pcl::PointXYZRGBA& pointXYZRGBA,
+												const size_t& curPointIndex,
+												PointPieceCache& localBuffer)
+{
+	// 根据当前点索引计算放入层级
+	int nLevelIndex = 0;
+	if (curPointIndex % 100 == 0)
+	{
+		nLevelIndex = EPageLodLevel::eWideLevelPageLod;
+	}
+	else if ((curPointIndex % 25 == 0) && (curPointIndex % 100 != 0))
+	{
+		nLevelIndex = EPageLodLevel::eTwoLevelPageLod;
+	}
+	else if ((curPointIndex % 5 == 0) && (curPointIndex % 25 != 0) && (curPointIndex % 100 != 0))
+	{
+		nLevelIndex = EPageLodLevel::eOneLevelPageLod;
+	}
+
+	SLevelInfo& tmpLevelInfo = _vecLevelInfo.at(nLevelIndex);
+
+	double dX = pointXYZRGBA.x + _centerPoint.x() - _nStartX;
+	double dY = pointXYZRGBA.y + _centerPoint.y() - _nStartY;
+	double dZ = pointXYZRGBA.z - _nStartZ;
+	float fPieceSize = tmpLevelInfo._fPieceSize;
+	int nX500Size = static_cast<int>(ceil(dX / fPieceSize));
+	int nY500Size = static_cast<int>(ceil(dY / fPieceSize));
+	int nZ500Size = static_cast<int>(ceil(dZ / fPieceSize));
+
+	// 过滤异常点
+	if (nX500Size < EPSILON || nY500Size < EPSILON || nZ500Size < EPSILON)
+	{
+		return;
+	}
+	nX500Size = nX500Size == 0 ? 1 : nX500Size;
+	nY500Size = nY500Size == 0 ? 1 : nY500Size;
+	nZ500Size = nZ500Size == 0 ? 1 : nZ500Size;
+
+	// 计算唯一索引：编码层级和位置信息
+	size_t nsize = (size_t)((nZ500Size - 1) * (tmpLevelInfo._nX500Size * tmpLevelInfo._nY500Size) +
+							tmpLevelInfo._nX500Size * (nY500Size - 1) + nX500Size);
+	if (nsize < 1 || nsize > tmpLevelInfo._PieceInfoVec.size())
+	{
+		return;
+	}
+
+	// 使用组合键：层级 << 48 | Piece索引，避免不同层级的冲突
+	size_t key = (static_cast<size_t>(nLevelIndex) << 48) | nsize;
+	localBuffer[key].emplace_back(pointXYZRGBA, curPointIndex);
+}
+
+void CPointCloudTool::FlushLocalBuffer(PointPieceCache& localBuffer)
+{
+	for (auto& kv : localBuffer)
+	{
+		// 解码层级和索引
+		int nLevelIndex = static_cast<int>(kv.first >> 48);
+		size_t nsize = kv.first & 0xFFFFFFFFFFFF;
+		
+		SLevelInfo& tmpLevelInfo = _vecLevelInfo.at(nLevelIndex);
+		
+		if (nsize < 1 || nsize > tmpLevelInfo._PieceInfoVec.size())
+		{
+			continue;
+		}
+
+		d3s::share_ptr<LasOsg::PieceInfo> pPiece = tmpLevelInfo._PieceInfoVec.at(nsize - 1);
+		if (nullptr == pPiece)
+		{
+			continue;
+		}
+
+		// 只需一次锁，批量添加所有点
+		{
+			tbb::mutex::scoped_lock lock(pPiece->mtx);
+			for (auto& pointPair : kv.second)
+			{
+				pPiece->cloudPt->push_back(pointPair.first);
+			}
+
+			// 检查是否需要写入文件
+			while (pPiece->cloudPt->size() >= PIECE_SAVE_NUM &&
+				   nLevelIndex != EPageLodLevel::eWideLevelPageLod)
+			{
+				WritePCDFile(pPiece.get());
+				pPiece->cloudPt = CloudPtr(new pcl::PointCloud<pcl::PointXYZRGBA>());
+				pPiece->cloudPt->reserve(RESERVE);
+			}
+		}
+	}
+	localBuffer.clear();
+}
+
 void CPointCloudTool::WritePCDFile(d3s::share_ptr<LasOsg::PieceInfo> pPiece)
 {
 	if (nullptr == pPiece || nullptr == pPiece->cloudPt || pPiece->cloudPt->size() == 0)
@@ -883,8 +976,9 @@ void CPointCloudTool::WritePCDFile(d3s::share_ptr<LasOsg::PieceInfo> pPiece)
 	CString strActFile = _strOutPath + strOgbPath;
 	std::string finame = CStringToolkit::CStringToUTF8(strActFile);
 
-	pcl::io::savePCDFileBinary(finame, *pPiece->cloudPt);
-	// _writeFileThread->AddTask(finame, pPiece->cloudPt);
+	
+	// pcl::io::savePCDFileBinary(finame, *pPiece->cloudPt);
+	_writeFileThread->AddTask(finame, pPiece->cloudPt);
 
 	pPiece->allPCDFilePath.emplace_back(finame);
 }

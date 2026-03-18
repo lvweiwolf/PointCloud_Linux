@@ -46,17 +46,22 @@ void CSavePieceProcessThread::run()
 
 void CSavePieceProcessThread::ProcessPointData()
 {
-	// 遍历处理所有点
+	typedef std::pair<pcl::PointXYZRGBA, size_t> PointCacheItem; // 点云点和对应的索引
+	typedef std::unordered_map<size_t, std::vector<PointCacheItem>> PointPieceCache;
+
 	auto start = std::chrono::steady_clock::now();
 	std::cout << "[Read START]" << std::endl;
 
 	// 计算当前数组启用的多线程数
 	size_t nTmpPointCount = _numPoints % MAX_MEMORY_POINT_NUM;
 	nTmpPointCount = (0 == nTmpPointCount) ? MAX_MEMORY_POINT_NUM : nTmpPointCount;
-	const int nTbbCount = std::ceil(nTmpPointCount / (float)nSpliteSize);
+	const int nTbbCount = static_cast<int>(std::ceil(nTmpPointCount / static_cast<float>(nSpliteSize)));
 
 	tbb::parallel_for(tbb::blocked_range<size_t>(0, nTbbCount),
 					  [&](const tbb::blocked_range<size_t>& r) {
+						  // 本地缓冲：按 PieceInfo 索引分组收集点，减少锁竞争
+						  PointPieceCache localBuffer;
+
 						  for (size_t i = r.begin(); i != r.end(); ++i)
 						  {
 							  size_t nStartPointIndex = nSpliteSize * i;
@@ -67,17 +72,21 @@ void CSavePieceProcessThread::ProcessPointData()
 								  nSpliteCount = nTmpPointCount - nStartPointIndex;
 							  }
 
+							  // 第一遍：收集点到本地缓冲
 							  for (size_t ii = 0; ii < nSpliteCount; ++ii)
 							  {
 								  size_t bufferIdx = nStartPointIndex + ii;
-								  _fileProcessor->SavePoinToPieceInfo(_pointBuffer[bufferIdx],
-																	  bufferIdx);
+								  _fileProcessor->CollectPointToLocalBuffer(_pointBuffer[bufferIdx],
+																			 bufferIdx, localBuffer);
 							  }
+							  
+							  // 第二遍：批量写入，大幅减少锁竞争
+							  _fileProcessor->FlushLocalBuffer(localBuffer);
 						  }
 					  });
 
-	// 清空数组
-	memset(_pointBuffer, 0, sizeof(pcl::PointXYZRGBA) * MAX_MEMORY_POINT_NUM);
+	// 移除不必要的 memset，只需重置计数即可
+	_numPoints = 0;
 
 	auto end = std::chrono::steady_clock::now();
 	auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);

@@ -15,6 +15,8 @@
 #include <BusinessNode/BnsProjectNode.h>
 #include <BusinessNode/BnsPointCloudNode.h>
 
+#include <unordered_map>
+
 class CPointCloudWriteThread;
 
 class CPointCloudTool
@@ -57,6 +59,10 @@ class CPointCloudTool
 		boost::shared_ptr<std::vector<int>> pointIndices; // 关联点云中的索引
 	};
 
+
+	typedef std::pair<pcl::PointXYZRGBA, size_t> PointCacheItem; // 点云点和对应的索引
+	typedef std::unordered_map<size_t, std::vector<PointCacheItem>> PointPieceCache;
+
 public:
 	CPointCloudTool(const CString& strLasFilePath,
 					pc::data::CModelNodePtr pProjectNode,
@@ -78,6 +84,14 @@ public:
 	 *  输出参数：	PieceInfo*					新块
 	 */
 	void SavePoinToPieceInfo(pcl::PointXYZRGBA& pointXYZRGBA, const I64& curPointIndex);
+
+	// 批量处理优化方法：收集点到本地缓冲
+	void CollectPointToLocalBuffer(pcl::PointXYZRGBA& pointXYZRGBA,
+								   const size_t& curPointIndex,
+								   PointPieceCache& localBuffer);
+
+	// 批量处理优化方法：将本地缓冲批量写入 PieceInfo
+	void FlushLocalBuffer(PointPieceCache& localBuffer);
 
 protected:
 	// 打开LAS文件
@@ -284,7 +298,7 @@ protected:
 
 	std::map<unsigned, unsigned> _typeMapping;
 
-	CPointCloudWriteThread *_writeFileThread; // 写文件线程
+	CPointCloudWriteThread* _writeFileThread; // 写文件线程
 };
 
 #endif // POINTCLOUDTOOL_H_
