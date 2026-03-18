@@ -1084,27 +1084,27 @@ void CPointCloudTool::FlushLocalBuffer(PointPieceCache& localBuffer)
 
 void CPointCloudTool::WritePCDFile(d3s::share_ptr<LasOsg::PieceInfo> pPiece)
 {
-	if (nullptr == pPiece || nullptr == pPiece->cloudPt || pPiece->cloudPt->size() == 0)
+	if (nullptr == pPiece || nullptr == pPiece->cloudPt || pPiece->cloudPt->empty())
 		return;
 
-	int nIndex = pPiece->nIdex;
-	pPiece->nIdex = pPiece->nIdex + 1;
-	CString strPCD;
-	strPCD.Format(L"%d#%s#%d.pcd",
-				  _nLasIdex,
-				  CStringToolkit::CStringToUTF8(pPiece->strOgbPath).c_str(),
-				  nIndex);
-	std::string sName = CStringToolkit::CStringToUTF8(strPCD);
+	// 预转换路径字符串（只转换一次）
+	std::string strOgbPath = CStringToolkit::CStringToUTF8(pPiece->strOgbPath);
+	std::string strOsgRePath = CStringToolkit::CStringToUTF8(pPiece->strOsgRePath);
+	std::string strOutPath = CStringToolkit::CStringToUTF8(_strOutPath);
 
-	CString strOgbPath = pPiece->strOsgRePath + strPCD;
-	CString strActFile = _strOutPath + strOgbPath;
-	std::string finame = CStringToolkit::CStringToUTF8(strActFile);
+	// 直接用 snprintf 构建 PCD 文件名
+	const int nIndex = pPiece->nIdex++;
+	char pcdName[512];
+	snprintf(pcdName, sizeof(pcdName), "%d#%s#%d.pcd", _nLasIdex, strOgbPath.c_str(), nIndex);
 
-	
-	pcl::io::savePCDFileBinary(finame, *pPiece->cloudPt);
-	// _writeFileThread->AddTask(finame, pPiece->cloudPt);
+	// 拼接完整路径
+	std::string finame;
+	finame.reserve(strOutPath.size() + strOsgRePath.size() + strlen(pcdName) + 1);
+	finame = strOutPath + strOsgRePath + pcdName;
 
-	pPiece->allPCDFilePath.emplace_back(finame);
+	// pcl::io::savePCDFileBinary(finame, *pPiece->cloudPt);
+	_writeFileThread->AddTask(finame, pPiece->cloudPt);
+	pPiece->allPCDFilePath.emplace_back(std::move(finame));
 }
 
 pc::data::CModelNodePtr CPointCloudTool::BuildAllPageLod(d3s::share_ptr<LasOsg::PieceInfo> pPiece)

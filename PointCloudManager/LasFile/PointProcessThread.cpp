@@ -128,55 +128,66 @@ void CSavePieceProcessThread::WaitComplete()
 
 ////////////////////////////////////////////////////////////////////
 
-CPointCloudWriteThread::CPointCloudWriteThread() : _running(true) {}
+CPointCloudWriteThread::CPointCloudWriteThread() : _running(true) 
+{
+	_taskBuffer.reserve(64);
+}
 
 CPointCloudWriteThread::~CPointCloudWriteThread() { WaitComplete(); }
+
+bool CPointCloudWriteThread::FetchAndProcessTasks()
+{
+	_taskBuffer.clear();
+	{
+		std::lock_guard<std::mutex> lock(_mutex);
+		while (!_tasks.empty())
+		{
+			_taskBuffer.push_back(std::move(_tasks.front()));
+			_tasks.pop();
+		}
+	}
+
+	if (_taskBuffer.empty())
+		return false;
+
+	const size_t taskCount = _taskBuffer.size();
+	auto start = std::chrono::steady_clock::now();
+	std::cout << "[Write START] Batch size: " << taskCount << std::endl;
+
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, taskCount),
+					  [this](const tbb::blocked_range<size_t>& r) {
+						  for (size_t i = r.begin(); i != r.end(); ++i)
+						  {
+							  const auto& task = _taskBuffer[i];
+							  pcl::io::savePCDFileBinary(task.filePath, *(task.cloudPtr));
+						  }
+					  });
+
+	auto end = std::chrono::steady_clock::now();
+	auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+	std::cout << "[Write DONE] " << elapsed_ms.count() << " ms" << std::endl;
+	return true;
+}
 
 void CPointCloudWriteThread::run()
 {
 	while (_running)
 	{
-		std::vector<std::shared_ptr<WriteTask>> batchTasks;
-
 		{
 			std::unique_lock<std::mutex> lock(_mutex);
-			_cv.wait_for(lock, batchInterval, [this] { return !_tasks.empty() || !_running; });
-
-			if (!_running)
-				break;
-
-			size_t batchCount = _tasks.size();
-			for (size_t i = 0; i < batchCount; ++i)
-			{
-				batchTasks.push_back(std::move(_tasks.front()));
-				_tasks.pop();
-			}
+			// 等待条件：任务达到阈值，或超时，或停止运行
+			_cv.wait_for(lock, std::chrono::milliseconds(WAIT_TIMEOUT_MS),
+				[this] { return _tasks.size() >= PARALLEL_THRESHOLD || !_running; });
 		}
 
-		// 执行任务
-		if (!batchTasks.empty())
-		{
-			auto start = std::chrono::steady_clock::now();
-			std::cout << "[Write START] " << " Batch size: " << batchTasks.size() << std::endl;
+		// 处理任务（无论是因为阈值触发还是超时触发）
+		FetchAndProcessTasks();
+	}
 
-			// tbb::parallel_for(tbb::blocked_range<size_t>(0, batchTasks.size()),
-			// 				  [&](const tbb::blocked_range<size_t>& r) {
-			// 					  for (size_t i = r.begin(); i != r.end(); ++i)
-			// 					  {
-			// 						  auto& task = batchTasks.at(i);
-			// 						  pcl::io::savePCDFileBinary(task->filePath, *(task->cloudPtr));
-			// 					  }
-			// 				  });
-
-			for (const auto& task : batchTasks)
-			{
-				pcl::io::savePCDFileBinary(task->filePath, *(task->cloudPtr));
-			}
-
-			auto end = std::chrono::steady_clock::now();
-			auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-			std::cout << "[Write DONE] " << elapsed_ms.count() << " ms" << std::endl;
-		}
+	// 线程退出前处理剩余任务
+	while (FetchAndProcessTasks())
+	{
+		// 循环处理直到队列为空
 	}
 }
 
@@ -184,7 +195,6 @@ void CPointCloudWriteThread::WaitComplete()
 {
 	_running = false;
 	_cv.notify_all();
-
 	join();
 }
 
@@ -192,10 +202,11 @@ void CPointCloudWriteThread::AddTask(const std::string& filePath, CloudPtr cloud
 {
 	{
 		std::lock_guard<std::mutex> lock(_mutex);
-		_tasks.push(std::make_shared<WriteTask>(filePath, cloudPtr));
+		_tasks.emplace(std::string(filePath), std::move(cloudPtr));
 	}
-
-	_cv.notify_one();
+	// 任务数量达到阈值时唤醒处理线程
+	if (_tasks.size() >= PARALLEL_THRESHOLD)
+		_cv.notify_one();
 }
 
 size_t CPointCloudWriteThread::GetTaskSize()

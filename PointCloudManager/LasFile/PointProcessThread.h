@@ -55,13 +55,14 @@ public:
 
 	struct WriteTask
 	{
-		WriteTask(const std::string& filePath_, CloudPtr cloud_)
-			: filePath(filePath_), cloudPtr(cloud_)
-		{
-		}
-
 		std::string filePath;
 		CloudPtr cloudPtr;
+
+		WriteTask() = default;
+		WriteTask(std::string&& filePath_, CloudPtr cloud_)
+			: filePath(std::move(filePath_)), cloudPtr(std::move(cloud_))
+		{
+		}
 	};
 
 	CPointCloudWriteThread();
@@ -76,12 +77,21 @@ public:
 	size_t GetTaskSize();
 
 private:
-	std::queue<std::shared_ptr<WriteTask>> _tasks;
+	// 取出任务并处理，返回是否处理了任务
+	bool FetchAndProcessTasks();
+
+private:
+	std::queue<WriteTask> _tasks;
 	std::mutex _mutex;
 	std::condition_variable _cv;
 	std::atomic<bool> _running;
 
-	std::chrono::milliseconds batchInterval{1000}; // 每100ms检查一次任务队列
+	// 复用的任务缓冲区
+	std::vector<WriteTask> _taskBuffer;
+
+	// 配置参数
+	static constexpr size_t PARALLEL_THRESHOLD = 4;    // 并行处理阈值
+	static constexpr int WAIT_TIMEOUT_MS = 100;        // 等待超时(毫秒)
 };
 
 
