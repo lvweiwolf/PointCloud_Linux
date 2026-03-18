@@ -184,6 +184,23 @@ protected:
 				   const double& dCenterPointZ,
 				   const bool& bReadClassify);
 
+	/**
+	 * 批量读取点 - 性能优化版本
+	 * @param [out] points       点数组
+	 * @param [in] maxCount      最大读取数量
+	 * @param [in] dCenterPointX 中心点x
+	 * @param [in] dCenterPointY 中心点y
+	 * @param [in] dCenterPointZ 中心点z
+	 * @param [in] bReadClassify 是否读取分类
+	 * @return 实际读取的点数
+	 */
+	size_t ReadPoints(pcl::PointXYZRGBA* points,
+					  size_t maxCount,
+					  const double& dCenterPointX,
+					  const double& dCenterPointY,
+					  const double& dCenterPointZ,
+					  const bool& bReadClassify);
+
 	// void SavePoinToPieceInfo(pcl::PointXYZRGBA& pointXYZRGBA, const I64& curPointIndex);
 
 	/**

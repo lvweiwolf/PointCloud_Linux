@@ -288,7 +288,7 @@ pc::data::CModelNodePtr CPointCloudTool::Las2Osgb()
 	currentPieceRoot->maxPoint = maxPoint;
 	CreateLasAllPiece(currentPieceRoot, Max_x, Max_y, Max_z, Min_x, Min_y, Min_z);
 
-	ProcessPointToPiece();
+	ProcessPointToPiece2();
 
 	return BuildAllPageLod(currentPieceRoot);
 }
@@ -691,8 +691,8 @@ void CPointCloudTool::ProcessPointToPiece()
 	auto start = std::chrono::steady_clock::now();
 
 	// 遍历点云
-	// CPointToPieceProcessThread* pProcessThread = new CPointToPieceProcessThread(this);
-	CSavePieceProcessThread* pProcessThread = new CSavePieceProcessThread(this);
+	CPointToPieceProcessThread* pProcessThread = new CPointToPieceProcessThread(this);
+	// CSavePieceProcessThread* pProcessThread = new CSavePieceProcessThread(this);
 	pProcessThread->start();
 
 	I64 nPointCount = 0;
@@ -742,6 +742,65 @@ void CPointCloudTool::ProcessPointToPiece()
 	auto end = std::chrono::steady_clock::now();
 	auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 	std::cout << "PointToPieceProcess() cost: " << elapsed_ms.count() << " ms" << std::endl;
+}
+
+void CPointCloudTool::ProcessPointToPiece2()
+{
+	auto start = std::chrono::steady_clock::now();
+
+	CSavePieceProcessThread* pProcessThread = new CSavePieceProcessThread(this);
+	pProcessThread->start();
+
+	I64 nPointCount = 0;
+	const double centerX = _centerPoint.x();
+	const double centerY = _centerPoint.y();
+	const double centerZ = _centerPoint.z();
+
+	// 双缓冲区
+	pcl::PointXYZRGBA* arrPoint1 = new pcl::PointXYZRGBA[MAX_MEMORY_POINT_NUM];
+	pcl::PointXYZRGBA* arrPoint2 = new pcl::PointXYZRGBA[MAX_MEMORY_POINT_NUM];
+	pcl::PointXYZRGBA* arrWrite = arrPoint1;  // 待写入的缓冲
+	pcl::PointXYZRGBA* arrRead = arrPoint2;   // 待读取填充的缓冲
+
+	// 批量读取配置
+	const size_t batchSize = 1000000;  // 每批读取 100 万点
+	size_t bufferOffset = 0;
+
+	while (true)
+	{
+		// 批量读取点
+		size_t readCount = ReadPoints(arrRead + bufferOffset, 
+									   MAX_MEMORY_POINT_NUM - bufferOffset,
+									   centerX, centerY, centerZ, true);
+		bufferOffset += readCount;
+
+		// 缓冲区满或读取完毕，提交处理
+		if (bufferOffset >= MAX_MEMORY_POINT_NUM || readCount == 0)
+		{
+			if (bufferOffset > 0)
+			{
+				pProcessThread->SetArrPoint(arrRead, nPointCount + bufferOffset);
+				nPointCount += bufferOffset;
+				bufferOffset = 0;
+
+				// 交换缓冲区
+				std::swap(arrRead, arrWrite);
+			}
+
+			if (readCount == 0)
+				break;
+		}
+	}
+
+	pProcessThread->WaitComplete();
+	SAFE_DELETE(pProcessThread);
+
+	delete[] arrPoint1;
+	delete[] arrPoint2;
+
+	auto end = std::chrono::steady_clock::now();
+	auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+	std::cout << "PointToPieceProcess2() cost: " << elapsed_ms.count() << " ms" << std::endl;
 }
 
 bool CPointCloudTool::ReadPoint(pcl::PointXYZRGBA& point,
@@ -797,6 +856,71 @@ bool CPointCloudTool::ReadPoint(pcl::PointXYZRGBA& point,
 		}
 	}
 	return true;
+}
+
+size_t CPointCloudTool::ReadPoints(pcl::PointXYZRGBA* points,
+								   size_t maxCount,
+								   const double& dCenterPointX,
+								   const double& dCenterPointY,
+								   const double& dCenterPointZ,
+								   const bool& bReadClassify)
+{
+	if (_pLasreader == nullptr || points == nullptr || maxCount == 0)
+		return 0;
+
+	size_t readCount = 0;
+	const double dOffSetZ = _dOffSetZ;
+
+	// 预取分类映射，避免每次查找
+	const bool bBoowayLas = _bBoowayLas;
+	const bool bShuZiLvDiLas = _bShuZiLvDiLas;
+	const auto& typeMapping = _typeMapping;
+
+	while (readCount < maxCount && _pLasreader->read_point())
+	{
+		LASpoint& lasPoint = _pLasreader->point;
+		pcl::PointXYZRGBA& point = points[readCount];
+
+		// RGB 处理
+		if (bShuZiLvDiLas)
+		{
+			point.r = lasPoint.get_R();
+			point.g = lasPoint.get_G();
+			point.b = lasPoint.get_B();
+		}
+		else
+		{
+			point.r = lasPoint.rgb[0] >> LAS_TINY_RIGHT_MOVE;
+			point.g = lasPoint.rgb[1] >> LAS_TINY_RIGHT_MOVE;
+			point.b = lasPoint.rgb[2] >> LAS_TINY_RIGHT_MOVE;
+		}
+
+		// 坐标处理
+		point.x = lasPoint.get_x() - dCenterPointX;
+		point.y = lasPoint.get_y() - dCenterPointY;
+		point.z = lasPoint.get_z() + dOffSetZ;
+
+		// 分类处理
+		point.a = 255;
+		if (bReadClassify)
+		{
+			if (bBoowayLas)
+			{
+				point.a = lasPoint.get_user_data();
+			}
+			else
+			{
+				point.a = lasPoint.get_classification();
+				auto it = typeMapping.find(point.a);
+				if (it != typeMapping.end())
+					point.a = it->second;
+			}
+		}
+
+		++readCount;
+	}
+
+	return readCount;
 }
 
 void CPointCloudTool::SavePoinToPieceInfo(pcl::PointXYZRGBA& pointXYZRGBA, const I64& curPointIndex)
@@ -977,8 +1101,8 @@ void CPointCloudTool::WritePCDFile(d3s::share_ptr<LasOsg::PieceInfo> pPiece)
 	std::string finame = CStringToolkit::CStringToUTF8(strActFile);
 
 	
-	// pcl::io::savePCDFileBinary(finame, *pPiece->cloudPt);
-	_writeFileThread->AddTask(finame, pPiece->cloudPt);
+	pcl::io::savePCDFileBinary(finame, *pPiece->cloudPt);
+	// _writeFileThread->AddTask(finame, pPiece->cloudPt);
 
 	pPiece->allPCDFilePath.emplace_back(finame);
 }
