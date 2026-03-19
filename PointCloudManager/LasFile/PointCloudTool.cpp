@@ -1167,7 +1167,7 @@ pc::data::CModelNodePtr CPointCloudTool::BuildAllPageLod(d3s::share_ptr<LasOsg::
 	// 确保pcd文件已写入完毕
 	_writeFileThread->WaitIdle();
 
-#if 1
+#if 0
 	size_t nCount = tmpPieceInfoVec.size();
 	for (size_t i = 0; i < nCount; i++)
 	{
@@ -1221,8 +1221,8 @@ pc::data::CModelNodePtr CPointCloudTool::BuildAllPageLod(d3s::share_ptr<LasOsg::
 	// 将各层级pagelod合并
 	std::vector<d3s::share_ptr<LasOsg::PieceInfo>>& vecPieceInfo =
 		_vecLevelInfo.at(eWideLevelPageLod)._PieceInfoVec;
-	
-	//int nIndex = 0;
+
+	// int nIndex = 0;
 	for (auto iterPieceInfo : vecPieceInfo)
 	{
 		for (auto iterPagedLod : iterPieceInfo->childpagedLodPrtvec)
