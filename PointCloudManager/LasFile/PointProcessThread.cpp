@@ -49,8 +49,8 @@ void CSavePieceProcessThread::ProcessPointData()
 	typedef std::pair<pcl::PointXYZRGBA, size_t> PointCacheItem; // 点云点和对应的索引
 	typedef std::unordered_map<size_t, std::vector<PointCacheItem>> PointPieceCache;
 
-	auto start = std::chrono::steady_clock::now();
-	std::cout << "[Read START]" << std::endl;
+	// auto start = std::chrono::steady_clock::now();
+	// std::cout << "[Read START]" << std::endl;
 
 	// 计算当前数组启用的多线程数
 	size_t nTmpPointCount = _numPoints % MAX_MEMORY_POINT_NUM;
@@ -73,33 +73,20 @@ void CSavePieceProcessThread::ProcessPointData()
 								  nSpliteCount = nTmpPointCount - nStartPointIndex;
 							  }
 
-#if 1
 							  for (size_t nIndex = 0; nIndex < nSpliteCount; ++nIndex)
 							  {
 								  size_t buferIndex = nStartPointIndex + nIndex;
 								  _fileProcessor->SavePoinToPieceInfo(_pointBuffer[buferIndex],
 																	  buferIndex);
 							  }
-#else
-							  // 第一遍：收集点到本地缓冲
-							  for (size_t ii = 0; ii < nSpliteCount; ++ii)
-							  {
-								  size_t bufferIdx = nStartPointIndex + ii;
-								  _fileProcessor->CollectPointToLocalBuffer(_pointBuffer[bufferIdx],
-																			 bufferIdx, localBuffer);
-							  }
-							  
-							  // 第二遍：批量写入，大幅减少锁竞争
-							  _fileProcessor->FlushLocalBuffer(localBuffer);
-#endif
 						  }
 					  });
 	// 移除不必要的 memset，只需重置计数即可
 	_numPoints = 0;
 
-	auto end = std::chrono::steady_clock::now();
-	auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-	std::cout << "[Read DONE]  " << elapsed_ms.count() << " ms" << std::endl;
+	// auto end = std::chrono::steady_clock::now();
+	// auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+	// std::cout << "[Read DONE]  " << elapsed_ms.count() << " ms" << std::endl;
 }
 
 void CSavePieceProcessThread::SetArrPoint(pcl::PointXYZRGBA* pArrPoint, size_t nPointCount)
@@ -177,8 +164,8 @@ void CPointCloudWriteThread::run()
 
 		// 处理任务
 		const size_t taskSize = processTasks.size();
-		auto start = std::chrono::steady_clock::now();
-		std::cout << "[Write START] Batch size: " << taskSize << std::endl;
+		// auto start = std::chrono::steady_clock::now();
+		// std::cout << "[Write START] Batch size: " << taskSize << std::endl;
 
 		tbb::parallel_for(tbb::blocked_range<size_t>(0, taskSize),
 						  [&](const tbb::blocked_range<size_t>& r) {
@@ -189,9 +176,9 @@ void CPointCloudWriteThread::run()
 							  }
 						  });
 
-		auto end = std::chrono::steady_clock::now();
-		auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-		std::cout << "[Write DONE] " << elapsed_ms.count() << " ms" << std::endl;
+		// auto end = std::chrono::steady_clock::now();
+		// auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+		// std::cout << "[Write DONE] " << elapsed_ms.count() << " ms" << std::endl;
 	}
 
 	_stoped = true;
