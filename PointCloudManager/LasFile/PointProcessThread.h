@@ -10,7 +10,7 @@
 #include <osg/ref_ptr>
 #include <OpenThreads/Thread>
 
-#include <queue>
+#include <deque>
 #include <mutex>
 #include <condition_variable>
 
@@ -72,26 +72,29 @@ public:
 
 	void WaitComplete();
 
+	void WaitIdle();
+
 	void AddTask(const std::string& filePath, CloudPtr cloudPtr);
 
-	size_t GetTaskSize();
+	int GetTaskSize() const { return _numProcessTasks; }
+
+	int GetWritedPointSize() const { return _numWritedPoints; }
+
+	bool IsWaiting() const { return _waiting; }
 
 private:
 	// 取出任务并处理，返回是否处理了任务
 	bool FetchAndProcessTasks();
 
 private:
-	std::queue<WriteTask> _tasks;
+	std::deque<WriteTask> _tasks;
 	std::mutex _mutex;
-	std::condition_variable _cv;
+
 	std::atomic<bool> _running;
-
-	// 复用的任务缓冲区
-	std::vector<WriteTask> _taskBuffer;
-
-	// 配置参数
-	static constexpr size_t PARALLEL_THRESHOLD = 4;    // 并行处理阈值
-	static constexpr int WAIT_TIMEOUT_MS = 100;        // 等待超时(毫秒)
+	std::atomic<bool> _waiting;
+	std::atomic<bool> _stoped;
+	std::atomic<int> _numProcessTasks;
+	std::atomic<int> _numWritedPoints;
 };
 
 

@@ -568,7 +568,7 @@ std::vector<osg::ref_ptr<CPointCloudpagedLod>> CPointCloudpagedLod::GetNextLevel
 	for (auto& node : _children)
 	{
 		osg::ref_ptr<CPointCloudpagedLod> pPointCloudPagedLod =
-			dynamic_pointer_cast<CPointCloudpagedLod>(node);
+			osg::dynamic_pointer_cast<CPointCloudpagedLod>(node);
 		if (pPointCloudPagedLod.valid())
 		{
 			vNextLevelChidren.emplace_back(pPointCloudPagedLod);
@@ -590,7 +590,7 @@ void CPointCloudpagedLod::ClearLoadFile(void)
 			continue;
 		}
 		osg::ref_ptr<CPointCloudpagedLod> pPointCloudPagedLod =
-			dynamic_pointer_cast<CPointCloudpagedLod>(pNode);
+			osg::dynamic_pointer_cast<CPointCloudpagedLod>(pNode);
 		if (pPointCloudPagedLod.valid())
 		{
 			pPointCloudPagedLod->ClearLoadFile();
@@ -613,7 +613,7 @@ void CPointCloudpagedLod::ClearDatabaseRequest(bool bClearChild /* = true*/)
 	{
 		osg::ref_ptr<osg::Node> pNode = _children[i];
 		osg::ref_ptr<CPointCloudpagedLod> pPageLod =
-			dynamic_pointer_cast<CPointCloudpagedLod>(pNode);
+			osg::dynamic_pointer_cast<CPointCloudpagedLod>(pNode);
 		if (!pPageLod)
 			continue;
 		++nChildPagedLod;
@@ -941,7 +941,8 @@ void CPointCloudpagedLodSaveLoader::ObjectLoad(osg::ref_ptr<osg::Object>& pObjec
 		pObject = new CPointCloudpagedLod;
 	}
 
-	osg::ref_ptr<CPointCloudpagedLod> pPageLod = dynamic_pointer_cast<CPointCloudpagedLod>(pObject);
+	osg::ref_ptr<CPointCloudpagedLod> pPageLod =
+		osg::dynamic_pointer_cast<CPointCloudpagedLod>(pObject);
 	if (NULL == pPageLod)
 		return;
 
@@ -968,7 +969,8 @@ void CPointCloudpagedLodSaveLoader::ObjectSave(osg::ref_ptr<osg::Object> pObject
 	if (NULL == pDataStream || NULL == pObject.get())
 		return;
 
-	osg::ref_ptr<CPointCloudpagedLod> pPageLod = dynamic_pointer_cast<CPointCloudpagedLod>(pObject);
+	osg::ref_ptr<CPointCloudpagedLod> pPageLod =
+		osg::dynamic_pointer_cast<CPointCloudpagedLod>(pObject);
 	if (NULL == pPageLod)
 		return;
 

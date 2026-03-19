@@ -18,6 +18,9 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl/octree/octree_pointcloud.h>
 
+#include <tbb/parallel_for.h>
+#include <tbb/blocked_range.h>
+
 
 #define PieceTwoSize 1000.00
 #define MAX_MEMORY_POINT_NUM 40000000
@@ -290,7 +293,9 @@ pc::data::CModelNodePtr CPointCloudTool::Las2Osgb()
 
 	ProcessPointToPiece2();
 
-	return BuildAllPageLod(currentPieceRoot);
+	auto modelNodePtr = BuildAllPageLod(currentPieceRoot);
+
+	return modelNodePtr;
 }
 
 double CPointCloudTool::GetAreaValue(double dValue, double dCentreValue, bool bMax)
@@ -724,9 +729,6 @@ void CPointCloudTool::ProcessPointToPiece()
 		}
 		arrPoint[nArrPointIndex] = point;
 		++nPointCount;
-
-		// if (nPointCount % 1000000 == 0)
-		// 	std::cout << "[Main] 读取 " << 1000000 << " points" << std::endl;
 	}
 
 	// 数组的末尾处理
@@ -751,6 +753,41 @@ void CPointCloudTool::ProcessPointToPiece2()
 	CSavePieceProcessThread* pProcessThread = new CSavePieceProcessThread(this);
 	pProcessThread->start();
 
+#if 1
+	I64 nPointCount = 0;
+	I64 nArrPointIndex = 0;
+
+	// 创建两片内存区域读取las文件信息
+	pcl::PointXYZRGBA* arrPoint1 = new pcl::PointXYZRGBA[MAX_MEMORY_POINT_NUM];
+	pcl::PointXYZRGBA* arrPoint2 = new pcl::PointXYZRGBA[MAX_MEMORY_POINT_NUM];
+	pcl::PointXYZRGBA* arrPoint = arrPoint1;
+	pcl::PointXYZRGBA point;
+
+	while (ReadPoint(point, _centerPoint.x(), _centerPoint.y(), _centerPoint.z(), true))
+	{
+		nArrPointIndex = nPointCount % MAX_MEMORY_POINT_NUM; // 数组中的索引值
+
+		if (nPointCount != 0 && nArrPointIndex == 0) // 第一次不进入
+		{
+			pProcessThread->SetArrPoint(arrPoint, nPointCount);
+
+			// 点数组指针交换继续读取
+			if (arrPoint == arrPoint1)
+			{
+				arrPoint = arrPoint2;
+			}
+			else
+			{
+				arrPoint = arrPoint1;
+			}
+		}
+		arrPoint[nArrPointIndex] = point;
+		++nPointCount;
+	}
+
+	// 数组的末尾处理
+	pProcessThread->SetArrPoint(arrPoint, nPointCount);
+#else
 	I64 nPointCount = 0;
 	const double centerX = _centerPoint.x();
 	const double centerY = _centerPoint.y();
@@ -759,19 +796,22 @@ void CPointCloudTool::ProcessPointToPiece2()
 	// 双缓冲区
 	pcl::PointXYZRGBA* arrPoint1 = new pcl::PointXYZRGBA[MAX_MEMORY_POINT_NUM];
 	pcl::PointXYZRGBA* arrPoint2 = new pcl::PointXYZRGBA[MAX_MEMORY_POINT_NUM];
-	pcl::PointXYZRGBA* arrWrite = arrPoint1;  // 待写入的缓冲
-	pcl::PointXYZRGBA* arrRead = arrPoint2;   // 待读取填充的缓冲
+	pcl::PointXYZRGBA* arrWrite = arrPoint1; // 待写入的缓冲
+	pcl::PointXYZRGBA* arrRead = arrPoint2;	 // 待读取填充的缓冲
 
 	// 批量读取配置
-	const size_t batchSize = 1000000;  // 每批读取 100 万点
+	const size_t batchSize = 1000000; // 每批读取 100 万点
 	size_t bufferOffset = 0;
 
 	while (true)
 	{
 		// 批量读取点
-		size_t readCount = ReadPoints(arrRead + bufferOffset, 
-									   MAX_MEMORY_POINT_NUM - bufferOffset,
-									   centerX, centerY, centerZ, true);
+		size_t readCount = ReadPoints(arrRead + bufferOffset,
+									  MAX_MEMORY_POINT_NUM - bufferOffset,
+									  centerX,
+									  centerY,
+									  centerZ,
+									  true);
 		bufferOffset += readCount;
 
 		// 缓冲区满或读取完毕，提交处理
@@ -791,6 +831,7 @@ void CPointCloudTool::ProcessPointToPiece2()
 				break;
 		}
 	}
+#endif
 
 	pProcessThread->WaitComplete();
 	SAFE_DELETE(pProcessThread);
@@ -1047,9 +1088,9 @@ void CPointCloudTool::FlushLocalBuffer(PointPieceCache& localBuffer)
 		// 解码层级和索引
 		int nLevelIndex = static_cast<int>(kv.first >> 48);
 		size_t nsize = kv.first & 0xFFFFFFFFFFFF;
-		
+
 		SLevelInfo& tmpLevelInfo = _vecLevelInfo.at(nLevelIndex);
-		
+
 		if (nsize < 1 || nsize > tmpLevelInfo._PieceInfoVec.size())
 		{
 			continue;
@@ -1109,10 +1150,13 @@ void CPointCloudTool::WritePCDFile(d3s::share_ptr<LasOsg::PieceInfo> pPiece)
 
 pc::data::CModelNodePtr CPointCloudTool::BuildAllPageLod(d3s::share_ptr<LasOsg::PieceInfo> pPiece)
 {
+	auto start = std::chrono::steady_clock::now();
+
 	// 构建0-2层的pagelod信息
 	std::vector<d3s::share_ptr<LasOsg::PieceInfo>> tmpPieceInfoVec;
 	tmpPieceInfoVec.reserve(_vecLevelInfo.front()._PieceInfoVec.size() * 2);
-	auto nSize = _vecLevelInfo.size() - 1;
+	int nSize = (int)_vecLevelInfo.size() - 1;
+
 	for (int nIndex = 0; nIndex < nSize; ++nIndex)
 	{
 		tmpPieceInfoVec.insert(tmpPieceInfoVec.end(),
@@ -1120,7 +1164,11 @@ pc::data::CModelNodePtr CPointCloudTool::BuildAllPageLod(d3s::share_ptr<LasOsg::
 							   _vecLevelInfo[nIndex]._PieceInfoVec.end());
 	}
 
-	int nCount = tmpPieceInfoVec.size();
+	// 确保pcd文件已写入完毕
+	_writeFileThread->WaitIdle();
+
+#if 1
+	size_t nCount = tmpPieceInfoVec.size();
 	for (size_t i = 0; i < nCount; i++)
 	{
 		auto pPieceInfo = tmpPieceInfoVec.at(i).get();
@@ -1147,6 +1195,22 @@ pc::data::CModelNodePtr CPointCloudTool::BuildAllPageLod(d3s::share_ptr<LasOsg::
 	// };
 	// CTbbBuildPageLodInfo parallel(this, tmpPieceInfoVec);
 	// CTBBParallel::For(0, tmpPieceInfoVec.size(), parallel);
+#else
+	size_t pieceInfoSize = tmpPieceInfoVec.size();
+
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, pieceInfoSize),
+					  [&](const tbb::blocked_range<size_t>& r) {
+						  for (size_t i = r.begin(); i != r.end(); ++i)
+						  {
+							  auto piceInfo = tmpPieceInfoVec.at(i).get();
+
+							  if (nullptr == piceInfo)
+								  continue;
+
+							  BuildPageLodInfo(piceInfo);
+						  }
+					  });
+#endif
 
 	// d3s::CLog::Info(L"PCL转OSG节点完成，开始构建粗糙层级信息");
 
@@ -1157,7 +1221,8 @@ pc::data::CModelNodePtr CPointCloudTool::BuildAllPageLod(d3s::share_ptr<LasOsg::
 	// 将各层级pagelod合并
 	std::vector<d3s::share_ptr<LasOsg::PieceInfo>>& vecPieceInfo =
 		_vecLevelInfo.at(eWideLevelPageLod)._PieceInfoVec;
-	int nIndex = 0;
+	
+	//int nIndex = 0;
 	for (auto iterPieceInfo : vecPieceInfo)
 	{
 		for (auto iterPagedLod : iterPieceInfo->childpagedLodPrtvec)
@@ -1178,6 +1243,10 @@ pc::data::CModelNodePtr CPointCloudTool::BuildAllPageLod(d3s::share_ptr<LasOsg::
 	BuildWidePageLod(pPiece, pWidePageLod);
 
 	// d3s::CLog::Info(L"粗糙层级构建完毕");
+
+	auto end = std::chrono::steady_clock::now();
+	auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+	std::cout << "BuildAllPageLod() cost: " << elapsed_ms.count() << " ms" << std::endl;
 
 	return pWidePageLod;
 }
