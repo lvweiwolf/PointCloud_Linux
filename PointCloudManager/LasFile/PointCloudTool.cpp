@@ -21,9 +21,6 @@
 #include <tbb/parallel_for.h>
 #include <tbb/blocked_range.h>
 
-#define USE_MULTI_THREAD
-#define USE_READ_BATCH_POINT
-
 
 #define MAX_MEMORY_POINT_NUM 40000000
 #define PIECE_SAVE_NUM 500000

@@ -13,4 +13,7 @@
 #endif // __linux__
 #endif // __cplusplus
 
+#define USE_MULTI_THREAD
+#define USE_READ_BATCH_POINT
+
 #endif // POINTCLOUDMANAGER_EXPORT_H_

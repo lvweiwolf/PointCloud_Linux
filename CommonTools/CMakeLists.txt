@@ -26,12 +26,13 @@ target_compile_definitions(CommonTools PRIVATE
 target_include_directories(CommonTools PUBLIC 
 	${CMAKE_CURRENT_SOURCE_DIR}
 	${OSG_INCLUDE_DIR}
+	${PUGIXML_INCLUDE_DIR}
 )
 
 # 依赖库引用
 target_link_libraries(CommonTools PUBLIC 
 	OpenMP::OpenMP_CXX 
-	pugixml::pugixml
+	${PUGIXML_LIBRARY}
 	${OSG_LIBS}
 )
 

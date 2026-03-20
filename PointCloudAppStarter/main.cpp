@@ -29,14 +29,19 @@ void thread_func(int id) {
 	}
 }
 
-
-
-int main()
+int main(int argc, char* argv[])
 {
 	d3s::CLog::GetInst()->EnableRedirectTo(d3s::CLog::Sink::StdOutColor);
 
-	CString strLasFile = _T("/home/lvwei/cloud/temp/test_no_class.las");
-	CString strProjectPath = _T("/home/lvwei/cloud/temp/projects/");
+	if (argc != 3)
+	{
+		d3s::CLog::Warn("Usage: %s <input_las_file> <output_project_file>", argv[0]);
+		return 1;
+	}
+
+	CString strLasFile = CStringToolkit::UTF8ToCString(argv[1]);
+	CString strProjectPath = CStringToolkit::UTF8ToCString(argv[2]);
+
 	CString strProjectID = L"test.xmdx";
 	CString strProjectFile = strProjectPath + strProjectID;
 
@@ -86,7 +91,7 @@ int main()
 	 std::vector<d3s::pcs::PointId> result;
 	 seg->Segment(opt, result);*/
 
-	
-	printf("%s 向你问好!\n", "ConsoleApplicationTestSeg");
+
+	d3s::CLog::Info("%s 向你问好!\n", "ConsoleApplicationTestSeg");
 	return 0;
 }

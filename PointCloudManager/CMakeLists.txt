@@ -31,16 +31,16 @@ target_include_directories(PointCloudManager PUBLIC
 	CommonTools
 	PointCloudSegmentation
 	${THIRDPART_INCLUDE_DIR}
+	${TBB_INCLUDE_DIR}
 )
 
 # 依赖库引用
 target_link_libraries(PointCloudManager PUBLIC 
 	OpenMP::OpenMP_CXX 
 	Vulkan::Vulkan
-	TBB::tbb
 	CommonTools 
 	PointCloudSegmentation 
-	
+	${TBB_LIBRARIES}
 )
 
 set_target_properties(PointCloudManager PROPERTIES

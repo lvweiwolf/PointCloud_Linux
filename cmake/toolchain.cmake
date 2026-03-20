@@ -295,13 +295,26 @@ endmacro()
 # =============================================================================
 # SQLite3
 # =============================================================================
-set(SQLite3_INCLUDE_DIR "${THIRDPART_INCLUDE_DIR}")
-set(SQLite3_LIBRARY sqlite3)
-set(SQLite3_FOUND TRUE)
+# set(SQLite3_INCLUDE_DIR "${THIRDPART_INCLUDE_DIR}")
+# set(SQLite3_LIBRARY sqlite3)
+# set(SQLite3_FOUND TRUE)
 
-macro(target_link_sqlite3 target)
-    target_include_directories(${target} PRIVATE ${SQLite3_INCLUDE_DIR})
-    target_link_libraries(${target} ${SQLite3_LIBRARY})
+# macro(target_link_sqlite3 target)
+#     target_include_directories(${target} PRIVATE ${SQLite3_INCLUDE_DIR})
+#     target_link_libraries(${target} ${SQLite3_LIBRARY})
+# endmacro()
+
+
+# =============================================================================
+# pugixml
+# =============================================================================
+set(PUGIXML_INCLUDE_DIR "${THIRDPART_INCLUDE_DIR}")
+set(PUGIXML_LIBRARY pugixml)
+set(PUGIXML_FOUND TRUE)
+
+macro(target_link_pugixml target)
+    target_include_directories(${target} PRIVATE ${PUGIXML_INCLUDE_DIR})
+    target_link_libraries(${target} ${PUGIXML_LIBRARY})
 endmacro()
 
 # =============================================================================
@@ -358,12 +371,12 @@ endmacro()
 # TBB
 # =============================================================================
 set(TBB_INCLUDE_DIR "${THIRDPART_INCLUDE_DIR}/tbb")
-set(TBB_LIBRARY tbb)
+set(TBB_LIBRARIES tbb )
 set(TBB_FOUND TRUE)
 
 macro(target_link_tbb target)
     target_include_directories(${target} PRIVATE ${TBB_INCLUDE_DIR})
-    target_link_libraries(${target} ${TBB_LIBRARY})
+    target_link_libraries(${target} ${TBB_LIBRARIES})
 endmacro()
 
 
