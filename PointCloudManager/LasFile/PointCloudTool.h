@@ -37,6 +37,8 @@ class CPointCloudTool
 		std::vector<d3s::share_ptr<LasOsg::PieceInfo>> _PieceInfoVec; // 最小层级PieceInfo
 		std::vector<MoudelInfo> _LevelMoudelInfoVec;				  // Level模型信息记录集合
 
+		std::shared_ptr<tbb::mutex> _mtx;
+
 		SLevelInfo()
 		{
 			_nX500Size = 0;
@@ -155,7 +157,6 @@ protected:
 	 * @return
 	 */
 	void ProcessPointToPiece();
-	void ProcessPointToPiece2();
 
 	/**
 	 * 读取点

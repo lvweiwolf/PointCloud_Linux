@@ -131,7 +131,7 @@ namespace d3s {
 			// 文件不存在
 			if (!ExistsPath(filename))
 			{
-				PCS_ERROR("[ReadRoadVectorize] %s 文件不能存在!", filename.c_str());
+				PCS_ERROR("[ReadRoadVectorize] %s 文件不存在!", filename.c_str());
 				return nullptr;
 			}
 

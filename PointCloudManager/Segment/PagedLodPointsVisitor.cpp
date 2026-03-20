@@ -5,7 +5,10 @@
 #include <BusinessNode/BnsPointCloudNode.h>
 #include <LasFile/PointCloudPropertyTool.h>
 #include <LasFile/PointCloudToolkit.h>
+
 #include <include/ClassificationDef.h>
+
+#include <Tool/FileToolkit.h>
 
 // #include "PointCloudTool.h"
 // #include "PointCloudCommomTool.h"
@@ -332,7 +335,7 @@ void CPointReadWriter::Read()
 
 	if (!_pNode.valid())
 	{
-		// d3s::CLog::Error(L"读取 （%s） 文件节点为空!", strModelPath.strPointInfoFile);
+		d3s::CLog::Error(L"读取 （%s） 文件节点为空!", (LPCTSTR)strModelPath.strPointInfoFile);
 		return;
 	}
 
@@ -354,7 +357,7 @@ void CPointReadWriter::Write()
 
 	if (!_pNode.valid())
 	{
-		// d3s::CLog::Error(L"读取 （%s） 文件节点为空!", sPointInfoFileName);
+		d3s::CLog::Error("读取 （%s） 文件节点为空!", sPointInfoFileName.c_str());
 		return;
 	}
 
@@ -362,10 +365,15 @@ void CPointReadWriter::Write()
 	filter.SetPolygonParam();
 	_pNode->accept(filter);
 
+
 	// 写第零层级文件
 	const std::string sTexFileName = CStringToolkit::CStringToUTF8(strModelPath.strPointInfoFile);
+
 	if (!CPointCloudToolkit::WriteNode(_pNode, sTexFileName, CPointCloudToolkit::eTexCoord))
+	{
+		d3s::CLog::Error("写入 （%s） 文件失败!", sTexFileName.c_str());
 		return;
+	}
 }
 
 void CPointReadWriter::SetPolygonParam(const std::vector<osg::Vec3d>& vecSelectPonits,

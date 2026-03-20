@@ -4,7 +4,10 @@
 
 #include <BusinessNode/BnsPointCloudNode.h>
 
+#include <include/Log.h>
+
 #include <Tool/FileToolkit.h>
+
 
 // 过滤点云线程
 typedef std::vector<CPointReadWriter*> CFilterPointThreadVec;	// 点云过滤线程容器
@@ -25,7 +28,7 @@ public:
 		{
 			if (theIndex >= _threadList.size())
 			{
-				//d3s::CLog::Error(L"CTbbReadVec读取越界，List:%d, Index:%d", _threadList.size(), theIndex);
+				d3s::CLog::Error(L"CTbbReadVec读取越界，List:%d, Index:%d", _threadList.size(), theIndex);
 				return;
 			}
 			_threadList.at(theIndex)->Read();
@@ -50,7 +53,7 @@ public:
 		{
 			if (theIndex >= _threadList.size())
 			{
-				//d3s::CLog::Error(L"CTbbWriteVec读取越界，List:%d, Index:%d",  _threadList.size(), theIndex);
+				d3s::CLog::Error(L"CTbbWriteVec读取越界，List:%d, Index:%d",  _threadList.size(), theIndex);
 				return;
 			}
 			_threadList.at(theIndex)->Write();
@@ -147,7 +150,7 @@ void CPointCloudBoxQuery::InitBoundBoxToFileDic(
 		pc::data::tagPagedLodFile strModelPath = CPCQueryWrapperToolkit::GetPagedLodModelPath(pointCloudPagedLod);
 		if (strModelPath.strPointInfoFile.IsEmpty())
 		{
-			//d3s::CLog::Error(_T("InitBoundBoxToFileDic 第 %I64u 个pagedlod 模型路径为空"), i);
+			d3s::CLog::Error(_T("InitBoundBoxToFileDic 第 %I64u 个pagedlod 模型路径为空"), i);
 			continue;
 		}
 		boundBoxToFiles[boundBox].emplace_back(strModelPath);
@@ -232,7 +235,7 @@ void CPointCloudBoxQuery::MtReadPointsToPointCloud(const SMtReadParam& param)
 		pc::data::tagPagedLodFile strModelPath = CPCQueryWrapperToolkit::GetPagedLodModelPath(readWriterParam._pLodNode);
 		if (strModelPath.strPointInfoFile.IsEmpty() || !CFileToolkit::FileExist(strModelPath.strPointInfoFile))
 		{
-			//d3s::CLog::Error(L"读取 （%s） 文件节点为空!", strModelPath.strPointInfoFile);
+			d3s::CLog::Error(L"读取 （%s） 文件节点为空!", (LPCTSTR)strModelPath.strPointInfoFile);
 			continue;
 		}
 		readWriterParam._nBeginIndex = nPointSize;
@@ -319,7 +322,7 @@ void CPointCloudBoxQuery::MtSetPointsCloudToPoints(SMtSetParam& param)
 		pc::data::tagPagedLodFile strModelPath = CPCQueryWrapperToolkit::GetPagedLodModelPath(readWriterParam._pLodNode);
 		if (strModelPath.strPointInfoFile.IsEmpty() || !CFileToolkit::FileExist(strModelPath.strPointInfoFile))
 		{
-			//d3s::CLog::Error(L"读取 （%s） 文件节点为空!", strModelPath.strPointInfoFile);
+			d3s::CLog::Error(L"读取 （%s） 文件节点为空!", (LPCTSTR)strModelPath.strPointInfoFile);
 			continue;
 		}
 		readWriterParam._nBeginIndex = nPointSize;
@@ -333,7 +336,7 @@ void CPointCloudBoxQuery::MtSetPointsCloudToPoints(SMtSetParam& param)
 	//CTBBParallel::For(0, threadList.size(), parallel);
 	for (auto pThread : threadList)
 	{
-		pThread->Read();
+		pThread->Write();
 	}
 
 	// 获取线程队列数据,并同步清除线程，减少内存峰值开销
@@ -352,7 +355,7 @@ void CPointCloudBoxQuery::MtSetPointsCloudToPoints(SMtSetParam& param)
 		pc::data::tagPagedLodFile strModelPath = CPCQueryWrapperToolkit::GetPagedLodModelPath(readWriterParam._pLodNode);
 		if (strModelPath.strPointInfoFile.IsEmpty() || !CFileToolkit::FileExist(strModelPath.strPointInfoFile))
 		{
-			//d3s::CLog::Error(L"读取 （%s） 文件节点为空!", strModelPath.strPointInfoFile);
+			d3s::CLog::Error(L"读取 （%s） 文件节点为空!", (LPCTSTR)strModelPath.strPointInfoFile);
 			continue;
 		}
 		readWriterParam._nBeginIndex = nPointSize;

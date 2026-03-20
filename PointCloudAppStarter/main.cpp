@@ -33,36 +33,7 @@ void thread_func(int id) {
 
 int main()
 {
-	//std::vector<std::thread> threads;
-	//for (int t = 0; t < 10; ++t) {
-	//	threads.emplace_back(thread_func, t);
-	//}
-	//for (auto& th : threads) {
-	//	th.join();
-	//}
-	//std::this_thread::sleep_for(std::chrono::seconds(2)); // 给后台线程足够时间
-	// d3s::CLog::Log(d3s::CLog::info, "%s：%d", "测试Info", 2);
-	// d3s::CLog::Log(d3s::CLog::info, "%s：%d  %s 毫秒", "测试Info", 2,"测试");
-	// d3s::CLog::Log(d3s::CLog::info, "测试%s：%d", "Info", 2);
-	// d3s::CLog::Log(d3s::CLog::info, "test1 %s：%d", "Info", 2);
-	// d3s::CLog::Log(d3s::CLog::info, "test1 %s：%d", "Info", 2);
-	// {
-	// 	d3s::CTimeLog("测试string%s","helop米哦好");
-	// }
-	// {
-	// 	d3s::CTimeLog(L"测试wstring");
-	// }
-
-	// d3s::CLog::Error(L"测试%ls：%d", L"Error", 3);
-	// std::wstring str = L"测试%ls：%d";
-	// d3s::CLog::Log(d3s::CLog::err, str, L"Error", 3);
-	// d3s::CLog::Log(d3s::CLog::info, "测试%s：%d", "Info", 2);
-	// d3s::CLog::Log(d3s::CLog::debug, "测试 % s： % d", "Debug", 4);
-	// d3s::CLog::Log(d3s::CLog::warn, "测试%s：%d", "Warn", 1);
-
-	// d3s::CLog::LogPrint();
-	// d3s::CLog::LogPrint();
-
+	d3s::CLog::GetInst()->EnableRedirectTo(d3s::CLog::Sink::StdOutColor);
 
 	CString strLasFile = _T("/home/lvwei/cloud/temp/test_no_class.las");
 	CString strProjectPath = _T("/home/lvwei/cloud/temp/projects/");
@@ -90,7 +61,7 @@ int main()
 	auto end = std::chrono::steady_clock::now();
 	auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 	std::cout << "ImportLasFile() cost: " << elapsed_ms.count() << " ms" << std::endl;
-#if 1
+	
 	/*3.保存工程文件*/
 	CProjectManagerTool::SaveProject(strProjectFile, bnsProject);
 
@@ -114,7 +85,8 @@ int main()
 	 "/home/whm/test.ini"; d3s::pcs::IOptions* opt = d3s::pcs::CreateOptions(strOptionPath.c_str());
 	 std::vector<d3s::pcs::PointId> result;
 	 seg->Segment(opt, result);*/
-#endif 
+
+	
 	printf("%s 向你问好!\n", "ConsoleApplicationTestSeg");
 	return 0;
 }

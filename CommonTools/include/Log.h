@@ -1,3 +1,6 @@
+#ifndef D3S_LOG_H_
+#define D3S_LOG_H_
+
 #include <include/CommonToolsExport.h>
 #include <memory>
 #include <string>
@@ -151,3 +154,4 @@ namespace d3s
 	};
 }
 
+#endif // D3S_LOG_H_

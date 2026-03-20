@@ -132,6 +132,11 @@ enum eCustomColorType
 	}
 #endif // !SAFE_DELETE_ARRAY
 
+#ifndef ASSERT
+#include <assert.h>
+#define ASSERT assert
+#endif
+
 
 #include <vector>
 

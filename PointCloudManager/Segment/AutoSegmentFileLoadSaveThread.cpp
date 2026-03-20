@@ -5,6 +5,7 @@
 #include <BusinessNode/PCNodeType.h>
 
 #include <include/PointCloudSegAPI.h>
+#include <include/Log.h>
 
 //////////////////////////////自动分类文件处理线程/////////////////////////////
 // 等待时间
@@ -76,7 +77,7 @@ IPointCloudPtr CAutoSegmentFileLoadSaveThread::QueryPoints(osg::BoundingBox boun
 {
 	if (_param._vPointCloudElements.empty())
 	{
-		// d3s::CLog::Warn(L"CPointCloudQueryService::QueryPoints 点云元素列表为空！");
+		d3s::CLog::Warn("CPointCloudQueryService::QueryPoints 点云元素列表为空！");
 		return NULL;
 	}
 	if (!_bReadTinyPagedLods)
@@ -92,7 +93,7 @@ IPointCloudPtr CAutoSegmentFileLoadSaveThread::QueryPoints(osg::BoundingBox boun
 	}
 	if (_vTinyPagedLods.empty())
 	{
-		// d3s::CLog::Error(L"CPointCloudQueryService::QueryPoints 未查询到PagedLod节点!");
+		d3s::CLog::Error("CPointCloudQueryService::QueryPoints 未查询到PagedLod节点!");
 		return NULL;
 	}
 
@@ -101,13 +102,6 @@ IPointCloudPtr CAutoSegmentFileLoadSaveThread::QueryPoints(osg::BoundingBox boun
 										   _vReadAllInValidLods,
 										   _queryBoundBox);
 
-	// ICloudSegmentationServicePtr pCloudSegmentationService =
-	// SHARE_PTR_CAST(d3s::pcs::ICloudSegmentationService,
-	// GetService(SERVICE_POINTCLOUD_SEGMENTATION)); if (nullptr == pCloudSegmentationService.get())
-	//{
-	// d3s::CLog::Error(L"ICloudSegmentationServicePtr获取为空");
-	// return nullptr;
-	//}
 
 	IPointCloudPtr pPointCloud = d3s::pcs::CreatePointCloud();
 	CPointCloudBoxQuery::SMtReadParam param;
@@ -137,8 +131,7 @@ IPointCloudPtr CAutoSegmentFileLoadSaveThread::GetQueryPoints(
 	// timeRecord._strTip.Format(L"获取（第%d个包围盒）点耗时:", _nCompleteQueryCount - 1);
 	if (boundBox != _queryBoundBox)
 	{
-		// d3s::CLog::Error(L"CAutoSegmentFileLoadSaveThread::GetQueryPoints
-		// 已查询节点的包围盒和需要查询的包围盒不一致!");
+		d3s::CLog::Error("CAutoSegmentFileLoadSaveThread::GetQueryPoints 已查询节点的包围盒和需要查询的包围盒不一致!");
 		//  增加容错防止线程卡死
 		++_nCompleteModifyCount;
 		return NULL;
@@ -184,9 +177,10 @@ void CAutoSegmentFileLoadSaveThread::ModifyPointsClassify(void)
 {
 	if (_param._vPointCloudElements.empty())
 	{
-		// d3s::CLog::Warn(L"ModifyPointsClassify 点云为空");
+		d3s::CLog::Warn("ModifyPointsClassify 点云为空");
 		return;
 	}
+	
 	std::vector<pc::data::CModelNodePtr> tempLods = _vWriteValidLods;
 	std::vector<pc::data::CModelNodePtr> tempAllInLods = _vWriteAllInValidLods;
 	IPointCloudPtr tempPoint = _pModifyPoints;

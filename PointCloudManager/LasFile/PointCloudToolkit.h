@@ -12,6 +12,7 @@
 
 #include <include/PointCloudManagerExport.h>
 #include <include/cstring.h>
+#include <include/Log.h>
 
 #include <osg/BoundingBox>
 #include <osg/Geode>

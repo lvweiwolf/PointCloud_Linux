@@ -21,8 +21,10 @@
 #include <tbb/parallel_for.h>
 #include <tbb/blocked_range.h>
 
+#define USE_MULTI_THREAD
+#define USE_READ_BATCH_POINT
 
-#define PieceTwoSize 1000.00
+
 #define MAX_MEMORY_POINT_NUM 40000000
 #define PIECE_SAVE_NUM 500000
 #define OctteeSize 10
@@ -291,11 +293,9 @@ pc::data::CModelNodePtr CPointCloudTool::Las2Osgb()
 	currentPieceRoot->maxPoint = maxPoint;
 	CreateLasAllPiece(currentPieceRoot, Max_x, Max_y, Max_z, Min_x, Min_y, Min_z);
 
-	ProcessPointToPiece2();
+	ProcessPointToPiece();
 
-	auto modelNodePtr = BuildAllPageLod(currentPieceRoot);
-
-	return modelNodePtr;
+	return BuildAllPageLod(currentPieceRoot);
 }
 
 double CPointCloudTool::GetAreaValue(double dValue, double dCentreValue, bool bMax)
@@ -367,6 +367,8 @@ void CPointCloudTool::CreateLevelInfo(double Max_x,
 		int nAll500size =
 			tmpLevelInfo._nX500Size * tmpLevelInfo._nY500Size * tmpLevelInfo._nZ500Size;
 		tmpLevelInfo._PieceInfoVec.resize(nAll500size);
+		tmpLevelInfo._mtx = std::make_shared<tbb::mutex>();
+
 		_vecLevelInfo.emplace_back(tmpLevelInfo);
 	}
 	_vecLevelInfo.at(EPageLodLevel::eZeroLevelPageLod)._fPageLodMinPixel =
@@ -695,9 +697,9 @@ void CPointCloudTool::ProcessPointToPiece()
 	// 遍历处理所有点
 	auto start = std::chrono::steady_clock::now();
 
+#ifndef USE_MULTI_THREAD
 	// 遍历点云
 	CPointToPieceProcessThread* pProcessThread = new CPointToPieceProcessThread(this);
-	// CSavePieceProcessThread* pProcessThread = new CSavePieceProcessThread(this);
 	pProcessThread->start();
 
 	I64 nPointCount = 0;
@@ -740,20 +742,11 @@ void CPointCloudTool::ProcessPointToPiece()
 	// 释放数组
 	delete[] arrPoint1;
 	delete[] arrPoint2;
-
-	auto end = std::chrono::steady_clock::now();
-	auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-	std::cout << "PointToPieceProcess() cost: " << elapsed_ms.count() << " ms" << std::endl;
-}
-
-void CPointCloudTool::ProcessPointToPiece2()
-{
-	auto start = std::chrono::steady_clock::now();
-
+#else
 	CSavePieceProcessThread* pProcessThread = new CSavePieceProcessThread(this);
 	pProcessThread->start();
 
-#if 0
+#ifndef USE_READ_BATCH_POINT
 	I64 nPointCount = 0;
 	I64 nArrPointIndex = 0;
 
@@ -832,16 +825,16 @@ void CPointCloudTool::ProcessPointToPiece2()
 		}
 	}
 #endif
-
 	pProcessThread->WaitComplete();
 	SAFE_DELETE(pProcessThread);
 
 	delete[] arrPoint1;
 	delete[] arrPoint2;
+#endif
 
 	auto end = std::chrono::steady_clock::now();
 	auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-	std::cout << "PointToPieceProcess2() cost: " << elapsed_ms.count() << " ms" << std::endl;
+	std::cout << "PointToPieceProcess() cost: " << elapsed_ms.count() << " ms" << std::endl;
 }
 
 bool CPointCloudTool::ReadPoint(pcl::PointXYZRGBA& point,
@@ -1050,8 +1043,12 @@ void CPointCloudTool::WritePCDFile(d3s::share_ptr<LasOsg::PieceInfo> pPiece)
 	finame.reserve(strOutPath.size() + strOsgRePath.size() + strlen(pcdName) + 1);
 	finame = strOutPath + strOsgRePath + pcdName;
 
-	// pcl::io::savePCDFileBinary(finame, *pPiece->cloudPt);
+#ifndef USE_MULTI_THREAD
+	pcl::io::savePCDFileBinary(finame, *pPiece->cloudPt);
+#else
 	_writeFileThread->AddTask(finame, pPiece->cloudPt);
+#endif
+
 	pPiece->allPCDFilePath.emplace_back(std::move(finame));
 }
 
@@ -1076,6 +1073,16 @@ pc::data::CModelNodePtr CPointCloudTool::BuildAllPageLod(d3s::share_ptr<LasOsg::
 
 	size_t pieceInfoSize = tmpPieceInfoVec.size();
 
+#ifndef USE_MULTI_THREAD
+	for (size_t i = 0; i < pieceInfoSize; i++)
+	{
+		auto pPieceInfo = tmpPieceInfoVec.at(i).get();
+		if (nullptr == pPieceInfo)
+			continue;
+
+		BuildPageLodInfo(pPieceInfo);
+	}
+#else
 	tbb::parallel_for(tbb::blocked_range<size_t>(0, pieceInfoSize),
 					  [&](const tbb::blocked_range<size_t>& r) {
 						  for (size_t i = r.begin(); i != r.end(); ++i)
@@ -1088,8 +1095,9 @@ pc::data::CModelNodePtr CPointCloudTool::BuildAllPageLod(d3s::share_ptr<LasOsg::
 							  BuildPageLodInfo(piceInfo);
 						  }
 					  });
+#endif
 
-	// d3s::CLog::Info(L"PCL转OSG节点完成，开始构建粗糙层级信息");
+	d3s::CLog::Info("PCL转OSG节点完成，开始构建粗糙层级信息");
 
 	// 构建粗略层(3)级的PageLod
 	pc::data::CModelNodePtr pWidePageLod =
@@ -1119,7 +1127,7 @@ pc::data::CModelNodePtr CPointCloudTool::BuildAllPageLod(d3s::share_ptr<LasOsg::
 	// 构建粗略层(3)级的PageLod
 	BuildWidePageLod(pPiece, pWidePageLod);
 
-	// d3s::CLog::Info(L"粗糙层级构建完毕");
+	d3s::CLog::Info(L"粗糙层级构建完毕");
 
 	auto end = std::chrono::steady_clock::now();
 	auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
@@ -1357,6 +1365,8 @@ void CPointCloudTool::WriteMoudleInfo(const osg::BoundingBox& boundingBox,
 	minmodelInfo.nPointCnt = nPtCnt;
 	{
 		// toolkit::CCriticalSectionSync cs(_vecLevelInfo.at(eLevel)._CSC);
+		tbb::mutex::scoped_lock lock(*(_vecLevelInfo.at(eLevel)._mtx));
+		
 		_vecLevelInfo.at(eLevel)._LevelMoudelInfoVec.emplace_back(minmodelInfo);
 	}
 }

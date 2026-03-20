@@ -259,32 +259,40 @@ namespace d3s {
 			// 用户指定杆塔坐标
 			std::vector<osg::Vec3d> positions;
 
-			int doubleSize = options->GetInt("DoubleArraySize");
-			void* doubleArrayData = options->GetData("DoubleArrayData");
-
-			if (doubleSize > 0)
+			try
 			{
-				if (doubleSize % 3 == 0)
+				int doubleSize = options->GetInt("DoubleArraySize");
+				void* doubleArrayData = options->GetData("DoubleArrayData");
+
+				if (doubleSize > 0)
 				{
-					double* doubleArray = static_cast<double*>(doubleArrayData);
-					int positionSize = doubleSize / 3;
-					positions.resize(positionSize);
-
-
-					for (int i = 0; i < positionSize; ++i)
+					if (doubleSize % 3 == 0)
 					{
-						// 读取地理坐标
-						for (int j = 0; j < 3; ++j)
-							positions[i][j] = doubleArray[i * 3 + j];
+						double* doubleArray = static_cast<double*>(doubleArrayData);
+						int positionSize = doubleSize / 3;
+						positions.resize(positionSize);
 
-						// 地理坐标减去偏移量
-						// positions[i] -= pcv->offset_xyz;
+
+						for (int i = 0; i < positionSize; ++i)
+						{
+							// 读取地理坐标
+							for (int j = 0; j < 3; ++j)
+								positions[i][j] = doubleArray[i * 3 + j];
+
+							// 地理坐标减去偏移量
+							// positions[i] -= pcv->offset_xyz;
+						}
+					}
+					else
+					{
+						PCS_WARN(
+							"[Powerline Corridors Segmentation] 用户指定杆塔坐标数据格式错误.");
 					}
 				}
-				else
-				{
-					PCS_WARN("[Powerline Corridors Segmentation] 用户指定杆塔坐标数据格式错误.");
-				}
+			}
+			catch (std::exception& e)
+			{
+				PCS_WARN("[Powerline Corridors Segmentation] 找不到 'DoubleArraySize', 用户未指定杆塔坐标.");
 			}
 
 

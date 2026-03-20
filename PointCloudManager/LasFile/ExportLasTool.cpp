@@ -11,6 +11,7 @@
 
 #include <include/IGeoProjectionConvertor.h>
 #include <include/PointCloudSegAPI.h>
+#include <include/Log.h>
 
 #include <Tool/FileToolkit.h>
 
@@ -99,7 +100,7 @@ bool CExportLasTool::ExportLasFileWithTime(const std::vector<pc::data::CModelNod
 	//d3s::CTimeLog timeRecord(_T("导出las文件耗时"));
 	if (pageLodList.empty() || (bByType && typeFileMap.empty()))
 	{
-		//d3s::CLog::Error(_T("参数传递为空"));
+		d3s::CLog::Error(_T("参数传递为空"));
 		return false;
 	}
 
@@ -129,7 +130,7 @@ bool CExportLasTool::ExportLasFileWithTime(const std::vector<pc::data::CModelNod
 		osg::ref_ptr<osg::Node> pNode = CPointCloudToolkit::ReadNode(sPointInfoFile, sPointTexFile);
 		if (nullptr == pNode)
 		{
-			//d3s::CLog::Error(_T("%s读取失败"), strPageLodFile);
+			d3s::CLog::Error(_T("%s读取失败"), sPointInfoFile.c_str());
 			continue;
 		}
 
@@ -163,7 +164,7 @@ bool CExportLasTool::CreateTypeLasWriterWithTime(std::map<int, SLasWriterData>& 
 		if (!CreateWriteOperator(typeLasWriterMap[EXPORT_ALL]._lasWriteOpener, typeLasWriterMap[EXPORT_ALL]._header, typeLasWriterMap[EXPORT_ALL]._pLaswriter
 			, typeLasWriterMap[EXPORT_ALL]._laspoint))
 		{
-			//d3s::CLog::Error(_T("写las文件操作器创建失败"));
+			d3s::CLog::Error(_T("写las文件操作器创建失败"));
 			return false;
 		}
 		return true;
@@ -178,7 +179,7 @@ bool CExportLasTool::CreateTypeLasWriterWithTime(std::map<int, SLasWriterData>& 
 		if (!CreateWriteOperator(typeLasWriterMap[iter.first]._lasWriteOpener, typeLasWriterMap[iter.first]._header, typeLasWriterMap[iter.first]._pLaswriter
 			, typeLasWriterMap[iter.first]._laspoint))
 		{
-			//d3s::CLog::Error(_T("写las文件操作器创建失败"));
+			d3s::CLog::Error(_T("写las文件操作器创建失败"));
 			return false;
 		}
 	}
@@ -213,7 +214,7 @@ bool CExportLasTool::CreateWriteOperator(LASwriteOpener& lasWriteOpener, LAShead
 	pLaswriter = lasWriteOpener.open(&header);
 	if (nullptr == pLaswriter)
 	{
-		//d3s::CLog::Warn(_T("laswriteopener.open()失败"));
+		d3s::CLog::Warn(_T("laswriteopener.open()失败"));
 		return false;
 	}
 	return BOOL(0) != laspoint.init(&header, header.point_data_format, header.point_data_record_length);
@@ -340,13 +341,13 @@ void CExportLasTool::WriteLas(osg::Node* pNode, const bool& bByType, std::map<in
 		const osg::Matrix& matrix = iter._matrix;
 		if (nullptr == pVertexArray || nullptr == pColorArray || nullptr == pTexCoordArray)
 		{
-			//d3s::CLog::Warn(_T("顶点、颜色或者纹理指针为空"));
+			d3s::CLog::Warn(_T("顶点、颜色或者纹理指针为空"));
 			continue;
 		}
 		size_t nCount = pVertexArray->size();
 		if (nCount != pColorArray->size() || nCount != pTexCoordArray->size())
 		{
-			//d3s::CLog::Warn(_T("顶点数量与颜色数量或者分类数量不同"));
+			d3s::CLog::Warn(_T("顶点数量与颜色数量或者分类数量不同"));
 			continue;
 		}
 
@@ -377,7 +378,7 @@ void CExportLasTool::WriteLas(osg::Node* pNode, const bool& bByType, std::map<in
 			const osg::Vec4ub& color = (*pColorArray)[i];
 			if (!WritePointInfo(point, color, offsetXyz, nType, pLaswriter, *pLaspoint))
 			{
-				//d3s::CLog::Warn(_T("[PointCloudWriter::PointCloudWriter] 写入第 %d 个点时，发生错误"), i);
+				d3s::CLog::Warn(_T("[PointCloudWriter::PointCloudWriter] 写入第 %d 个点时，发生错误"), i);
 				break;
 			}
 		}

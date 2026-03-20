@@ -42,8 +42,7 @@ bool CPointCloudToolkit::PtInPolygon(const osg::Vec3d& tagPt,
 			nCross++;
 		}
 	}
-	// 交点为偶数，点在多边形之外
-	// 交点为奇数，点在多边形之内
+	// 交点为偶数，点在多边形之外, 交点为奇数，点在多边形之内
 	if ((nCross % 2) == 1)
 	{
 		return true;
@@ -165,8 +164,8 @@ osg::ref_ptr<osg::Node> CPointCloudToolkit::ReadNode(const std::string& pointFil
 											  false);
 	if (!rsPointData.validNode())
 	{
-		// d3s::CLog::Error(L"CPointCloudToolkit::ReadNode节点信息加载出错!（%s）",
-		// CString(pointFilePath.c_str()));
+		d3s::CLog::Error("CPointCloudToolkit::ReadNode节点信息加载出错!（%s）",
+						 pointFilePath.c_str());
 		return nullptr;
 	}
 
@@ -186,8 +185,8 @@ osg::ref_ptr<osg::Node> CPointCloudToolkit::ReadNode(const std::string& pointFil
 												  false);
 		if (!rsColorData.validNode())
 		{
-			// d3s::CLog::Error(L"CPointCloudToolkit::ReadNode节点颜色信息加载出错!（%s）",
-			// CString(strColorFileName.c_str()));
+			d3s::CLog::Error("CPointCloudToolkit::ReadNode节点颜色信息加载出错!（%s）",
+							 strColorFileName.c_str());
 			return pReturnNode;
 		}
 
@@ -206,16 +205,17 @@ osg::ref_ptr<osg::Node> CPointCloudToolkit::ReadNode(const std::string& pointFil
 
 	// 加载纹理数组信息
 	std::string strTexFileName = texFileName;
-	// strTexFileName.replace(strTexFileName.find(pc::data::strFilExt), strTexFileName.length(),
-	// pc::data::TexPostStr + pc::data::strFilExt);
+	// strTexFileName.replace(strTexFileName.find(pc::data::strFilExt),
+	// 					   strTexFileName.length(),
+	// 					   pc::data::TexPostStr + pc::data::strFilExt);
 	osgDB::ReaderWriter::ReadResult rsTexData =
 		osgDB::Registry::instance()->readNode(strTexFileName,
 											  osgDB::Registry::instance()->getOptions(),
 											  false);
 	if (!rsTexData.validNode())
 	{
-		// d3s::CLog::Error(L"CPointCloudToolkit::ReadNode节点纹理信息加载出错!（%s）",
-		// CString(strTexFileName.c_str()));
+		d3s::CLog::Error(L"CPointCloudToolkit::ReadNode节点纹理信息加载出错!（%s）",
+						 strTexFileName.c_str());
 		return pReturnNode;
 	}
 
@@ -258,7 +258,7 @@ bool CPointCloudToolkit::WriteNode(osg::ref_ptr<osg::Node> pNode,
 		{
 			if (1 != iterGeo->getNumTexCoordArrays())
 			{
-				// ASSERT(FALSE && L"写入节点纹理数组数量错误！");
+				ASSERT(FALSE && L"写入节点纹理数组数量错误！");
 				continue;
 			}
 
@@ -297,8 +297,9 @@ bool CPointCloudToolkit::WriteNode(osg::ref_ptr<osg::Node> pNode,
 
 			// 还原颜色及纹理信息
 			size_t geoCount = geoVisitor._vecGeo.size();
-			/*ASSERT(geoCount == texArrList.size() && L"geometry与纹理数量不对应！");
-			ASSERT(geoCount == colorArrList.size() && L"geometry与颜色数量不对应！");*/
+			ASSERT(geoCount == texArrList.size() && L"geometry与纹理数量不对应！");
+			ASSERT(geoCount == colorArrList.size() && L"geometry与颜色数量不对应！");
+
 			if (geoCount == texArrList.size() && geoCount == colorArrList.size())
 			{
 				for (size_t nIndex = 0; nIndex < geoCount; ++nIndex)
@@ -334,8 +335,11 @@ bool CPointCloudToolkit::WriteNode(osg::ref_ptr<osg::Node> pNode,
 	}
 	catch (...)
 	{
-		/*d3s::CLog::Error(L"CPointCloudToolkit::WriteNode发生异常，函数参数：pNode==nullptr(%d)、fileName(%s)、eType(%d)"
-			, (nullptr == pNode), fileName, eType);*/
+		d3s::CLog::Error("CPointCloudToolkit::WriteNode发生异常，函数参数：pNode==nullptr(%d)"
+						 "、fileName(%s)、eType(%d)",
+						 (nullptr == pNode),
+						 fileName.c_str(),
+						 eType);
 	}
 	return false;
 }

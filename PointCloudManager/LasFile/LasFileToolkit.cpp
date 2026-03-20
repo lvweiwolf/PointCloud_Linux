@@ -3,6 +3,7 @@
 #include <LasFile/ExportLasTool.h>
 
 #include <include/BnsWrapper.h>
+#include <include/Log.h>
 
 
 // 存EPSG信息的Key值
@@ -47,7 +48,7 @@ bool CLasFileToolkit::GetPointCloudEpsg(int& nOutEpsg, const CString& strLasFile
 	LASvlr_geo_keys* pLasClrGeoKeys = pLasReader->header.vlr_geo_keys;
 	if (nullptr == pLasClrGeoKeys)
 	{
-		// d3s::CLog::Error(L"（%s）文件LASvlr_geo_keys为空!", strLasFile);
+		d3s::CLog::Error(L"（%s）文件LASvlr_geo_keys为空!", (LPCTSTR)strLasFile);
 	}
 	else
 	{

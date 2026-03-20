@@ -5,6 +5,7 @@
 #include <LasFile/PointCloudPropertyTool.h>
 #include <LasFile/PointCloudToolDefine.h>
 
+#include <include/Log.h>
 #include <Tool/FileToolkit.h>
 
 #include <osg/Geode>
@@ -768,7 +769,7 @@ bool CPointCloudpagedLod::AttachTexCoordArray(Node* pNode)
 
 	if (texVisitor._vecGeo.empty()) // 强制加载文件
 	{
-		// d3s::CLog::Info(L"强制加载纹理数组文件!（%s）", CString(GetOldFileName().c_str()));
+		d3s::CLog::Info("强制加载纹理数组文件!（%s）", GetOldFileName().c_str());
 		std::string strTexFilePath =
 			_databasePath +
 			(0 == _pTexProxyNode->getNumFileNames() ? "" : _pTexProxyNode->getFileName(0));
@@ -779,7 +780,7 @@ bool CPointCloudpagedLod::AttachTexCoordArray(Node* pNode)
 		}
 		else
 		{
-			// d3s::CLog::Info(L"强制加载纹理数组失败!（%s）", CString(strTexFilePath.c_str()));
+			d3s::CLog::Info("强制加载纹理数组失败!（%s）", strTexFilePath.c_str());
 		}
 	}
 
@@ -804,16 +805,14 @@ bool CPointCloudpagedLod::AttachTexCoordArray(Node* pNode)
 		}
 		else
 		{
-			// d3s::CLog::Info(L"geometry与纹理数量不对应!（%s）",
-			// CString(GetOldFileName().c_str()));
+			d3s::CLog::Info("geometry与纹理数量不对应!（%s）", GetOldFileName().c_str());
 		}
 	}
 	else if (!geoVisitor._vecGeo.empty() &&
 			 (geoVisitor._vecGeo.front()->getTexCoordArray(0) == nullptr)) // 检查是否已存在纹理数组
 	{
 		// 设置默认的纹理确保节点正常显示
-		// d3s::CLog::Info(L"设置默认的纹理确保节点正常显示!（%s）",
-		// CString(GetOldFileName().c_str()));
+		d3s::CLog::Info("设置默认的纹理确保节点正常显示!（%s）", GetOldFileName().c_str());
 		for (size_t nIndex = 0; nIndex < geoCount; ++nIndex)
 		{
 			osg::ref_ptr<osg::Vec3Array> pVertexArray =
@@ -835,7 +834,7 @@ bool CPointCloudpagedLod::AttachTexCoordArray(Node* pNode)
 			_databasePath +
 			(0 == _pColorProxyNode->getNumFileNames() ? "" : _pColorProxyNode->getFileName(0));
 
-		// d3s::CLog::Info(L"强制加载颜色数组文件!（%s）", CString(strColorFilePath.c_str()));
+		d3s::CLog::Info("强制加载颜色数组文件!（%s）", strColorFilePath.c_str());
 		osg::ref_ptr<osg::Node> pTmpNode = osgDB::readNodeFile(strColorFilePath);
 		if (nullptr != pTmpNode)
 		{
@@ -843,7 +842,7 @@ bool CPointCloudpagedLod::AttachTexCoordArray(Node* pNode)
 		}
 		else
 		{
-			// d3s::CLog::Info(L"强制加载颜色数组失败!（%s）", CString(strColorFilePath.c_str()));
+			d3s::CLog::Info("强制加载颜色数组失败!（%s）", strColorFilePath.c_str());
 		}
 	}
 	if (!colorxVisitor._vecGeo.empty())
@@ -874,8 +873,7 @@ void CPointCloudpagedLod::RequestLoadTexture(osg::NodeVisitor& nv, float priorit
 			CStringToolkit::convertUTF8toUTF16(strTexFilePath.c_str()).c_str();
 		if (!CFileToolkit::FileExist(strTempFilePath))
 		{
-			// d3s::CLog::Error(L"加载纹理数组错误!（%s）",
-			// CString(_pTexProxyNode->getFileName(0).c_str()));
+			d3s::CLog::Error("加载纹理数组错误!（%s）", _pTexProxyNode->getFileName(0).c_str());
 
 			// 检查目录下是否存在纹理名
 			CSimpleArray<CString> vFilePath;
@@ -918,7 +916,7 @@ void CPointCloudpagedLod::RequestLoadTexture(osg::NodeVisitor& nv, float priorit
 					}
 				}
 			}
-			// d3s::CLog::Info("查找到最新的纹理数组! (%s)", strTexFilePath.c_str());
+			d3s::CLog::Info("查找到最新的纹理数组! (%s)", strTexFilePath.c_str());
 		}
 
 		osg::NodePath nodePath = osg::NodePath({ _pTexProxyNode.get() });
@@ -941,7 +939,8 @@ void CPointCloudpagedLodSaveLoader::ObjectLoad(osg::ref_ptr<osg::Object>& pObjec
 		pObject = new CPointCloudpagedLod;
 	}
 
-	osg::ref_ptr<CPointCloudpagedLod> pPageLod = osg::dynamic_pointer_cast<CPointCloudpagedLod>(pObject);
+	osg::ref_ptr<CPointCloudpagedLod> pPageLod =
+		osg::dynamic_pointer_cast<CPointCloudpagedLod>(pObject);
 	if (NULL == pPageLod)
 		return;
 
@@ -968,7 +967,8 @@ void CPointCloudpagedLodSaveLoader::ObjectSave(osg::ref_ptr<osg::Object> pObject
 	if (NULL == pDataStream || NULL == pObject.get())
 		return;
 
-	osg::ref_ptr<CPointCloudpagedLod> pPageLod = osg::dynamic_pointer_cast<CPointCloudpagedLod>(pObject);
+	osg::ref_ptr<CPointCloudpagedLod> pPageLod =
+		osg::dynamic_pointer_cast<CPointCloudpagedLod>(pObject);
 	if (NULL == pPageLod)
 		return;
 
