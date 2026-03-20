@@ -1,4 +1,4 @@
-#ifndef GDAL_TYPES_H_
+﻿#ifndef GDAL_TYPES_H_
 #define GDAL_TYPES_H_
 
 #include <string>

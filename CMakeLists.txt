@@ -37,8 +37,6 @@ find_package(TBB REQUIRED)
 # 头文件搜索路径
 # include_directories(${PROJECT_SOURCE_DIR}/CommonTools)
 # include_directories(${PROJECT_SOURCE_DIR}/PointCloudSegmentation)
-
-
 # set(DEPENDENCY_LIBS "")
 
 # include_directories(${OSG_INCLUDE_DIR})

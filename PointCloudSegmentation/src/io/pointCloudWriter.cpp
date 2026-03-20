@@ -1,4 +1,4 @@
-#include <src/io/pointCloudWriter.h>
+﻿#include <src/io/pointCloudWriter.h>
 #include <src/io/geoProjectionConverter.h>
 #include <src/core/private/statistics.h>
 #include <src/core/private/gdalProcess.h>
@@ -158,15 +158,13 @@ namespace d3s {
 					laspoint.set_R(p.r);
 					laspoint.set_G(p.g);
 					laspoint.set_B(p.b);
-					// 558136 类别设置：新增的类别超过3种，第3种及以上的类别无法单独显示在视图中
-					// 附图V1.6.0.19
+					// 558136 类别设置：新增的类别超过3种，第3种及以上的类别无法单独显示在视图中 附图V1.6.0.19
 					laspoint.set_user_data(p.label);
 
 					if (!laswriter->write_point(&laspoint))
 					{
-						PCS_ERROR(
-							"[PointCloudWriter::PointCloudWriter] 写入第 %d 个点时，发生错误.",
-							i);
+						PCS_ERROR("[PointCloudWriter::PointCloudWriter] 写入第 %d 个点时，发生错误.",
+								  i);
 
 						writeComplete = false;
 

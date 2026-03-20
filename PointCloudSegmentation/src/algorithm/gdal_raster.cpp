@@ -1,4 +1,4 @@
-
+﻿
 #include <src/algorithm/gdal_raster.h>
 
 #include <gdal_priv.h>

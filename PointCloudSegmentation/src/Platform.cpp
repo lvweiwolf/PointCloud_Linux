@@ -1,4 +1,4 @@
-#include <src/Platform.h>
+﻿#include <src/Platform.h>
 
 
 #include <cstring>

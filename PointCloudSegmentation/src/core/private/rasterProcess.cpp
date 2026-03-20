@@ -1,4 +1,4 @@
-#include <src/core/private/rasterProcess.h>
+﻿#include <src/core/private/rasterProcess.h>
 #include <src/algorithm/delanuator.h>
 #include <src/algorithm/mesh.h>
 #include <src/algorithm/lsd.h>

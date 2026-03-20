@@ -1,4 +1,4 @@
-
+﻿
 #include <src/algorithm/delanuator.h>
 
 #include <cmath>

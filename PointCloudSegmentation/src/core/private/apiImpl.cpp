@@ -1,4 +1,4 @@
-#include <src/core/api.h>
+﻿#include <src/core/api.h>
 #include <src/core/pointTypes.hpp>
 
 #include <src/io/pointCloudWriter.h>

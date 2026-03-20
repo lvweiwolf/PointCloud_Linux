@@ -1,4 +1,4 @@
-#include <src/core/private/gdalProcess.h>
+﻿#include <src/core/private/gdalProcess.h>
 #include <src/7z/7z.h>
 #include <src/Platform.h>
 
@@ -26,7 +26,7 @@
 #include <libgen.h>
 #include <mutex>
 #include <memory>
-
+#include <include/CommonToolsDef.h>
 
 
 #ifndef RGB

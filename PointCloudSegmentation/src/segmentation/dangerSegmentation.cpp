@@ -1,4 +1,4 @@
-#include <src/segmentation/dangerSegmentation.h>
+﻿#include <src/segmentation/dangerSegmentation.h>
 #include <src/segmentation/gridCell.h>
 #include <src/core/api.h>
 #include <src/core/private/rasterProcess.h>
@@ -300,13 +300,13 @@ namespace d3s {
 		//////////////////////////////////////////////////////////////////////////
 		void DomSegmentOptions::Print()
 		{
-			PCS_INFO("dom_file_path: %s", dom_file_path);
-			PCS_INFO("dom_road_segment_param: %s", road_segment_param);
-			PCS_INFO("dom_road_segment_model: %s", road_segment_bin);
-			PCS_INFO("dom_building_segment_param: %s", building_segment_param);
-			PCS_INFO("dom_building_segment_model: %s", building_segment_bin);
-			PCS_INFO("dom_water_segment_param: %s", water_segment_param);
-			PCS_INFO("dom_water_segment_model: %s", water_segment_bin);
+			PCS_INFO("dom_file_path: %s", dom_file_path.c_str());
+			PCS_INFO("dom_road_segment_param: %s", road_segment_param.c_str());
+			PCS_INFO("dom_road_segment_model: %s", road_segment_bin.c_str());
+			PCS_INFO("dom_building_segment_param: %s", building_segment_param.c_str());
+			PCS_INFO("dom_building_segment_model: %s", building_segment_bin.c_str());
+			PCS_INFO("dom_water_segment_param: %s", water_segment_param.c_str());
+			PCS_INFO("dom_water_segment_model: %s", water_segment_bin.c_str());
 		}
 
 

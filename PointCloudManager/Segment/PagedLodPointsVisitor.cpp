@@ -1,4 +1,4 @@
-
+﻿
 #include <Segment/PagedLodPointsVisitor.h>
 #include <Segment/PCQueryWrapperToolkit.h>
 

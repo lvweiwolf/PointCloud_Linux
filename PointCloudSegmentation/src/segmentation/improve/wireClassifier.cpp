@@ -1,4 +1,4 @@
-#include <src/segmentation/improve/wireClassifier.h>
+﻿#include <src/segmentation/improve/wireClassifier.h>
 #include <src/segmentation/gridCell.h>
 #include <src/segmentation/pylonCommon.h>
 #include <src/algorithm/geometry2d_op.h>

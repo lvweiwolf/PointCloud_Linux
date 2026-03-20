@@ -1,4 +1,4 @@
-#include <BusinessNode/BnsProjectNode.h>
+﻿#include <BusinessNode/BnsProjectNode.h>
 #include <BusinessNode/PCNodeType.h>
 
 const CString STRING_PROJECT_NNAME = L"Project_Name";

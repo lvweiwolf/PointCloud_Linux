@@ -1,4 +1,4 @@
-#include <src/algorithm/ransac_line_model.h>
+﻿#include <src/algorithm/ransac_line_model.h>
 #include <src/utils/logging.h>
 #include <src/core/pointTypes.hpp>
 

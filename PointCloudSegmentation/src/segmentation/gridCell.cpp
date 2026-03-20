@@ -1,4 +1,4 @@
-#include <src/segmentation/gridCell.h>
+﻿#include <src/segmentation/gridCell.h>
 #include <src/core/pointTypes.hpp>
 #include <src/core/private/statistics.h>
 #include <src/algorithm/math.h>

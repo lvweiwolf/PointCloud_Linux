@@ -1,4 +1,4 @@
-#include <LasFile/PointCloudPropertyTool.h>
+﻿#include <LasFile/PointCloudPropertyTool.h>
 
 #include <algorithm>
 

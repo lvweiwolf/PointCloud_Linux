@@ -1,4 +1,4 @@
-#include <src/io/rasterWriter.h>
+﻿#include <src/io/rasterWriter.h>
 
 #include <src/algorithm/gdal_raster.h>
 
@@ -44,8 +44,8 @@ namespace d3s {
 				{
 					PCS_ERROR("[RasterWriter] Ignoring raster '%s'. Raster limits don't match that "
 							  "of raster '%s'.",
-							  r->name(),
-							  _rasters.front()->name());
+							  r->name().c_str(),
+							  _rasters.front()->name().c_str());
 
 					continue;
 				}

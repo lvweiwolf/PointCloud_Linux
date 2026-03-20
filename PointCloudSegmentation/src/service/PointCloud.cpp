@@ -1,4 +1,4 @@
-#include <src/service/PointCloud.h>
+﻿#include <src/service/PointCloud.h>
 #include <src/core/api.h>
 #include <src/core/pointTypes.hpp>
 #include <src/segmentation/gridCell.h>
@@ -81,10 +81,10 @@ namespace d3s {
 			return (uint32_t)_pcv.points[idx].data[3];
 		}
 
-		//[����]���Ż��Զ����ࡢ��ľ�ָ�����
-		//[��ʷԭ��]��ͨ��GetFieldInternel��SetFieldInternel��ʽ��ȡ���ô��ڲ���Ҫ���ַ���ƥ����������
-		//[�޸Ĳ���]��ͨ������ֱ�ӻ�ȡ
-		//[�޸���]����� 2023/02/23
+		//[问题]：优化自动分类、单木分割性能
+		//[历史原因]：通过GetFieldInternel、SetFieldInternel方式获取设置存在不必要的字符串匹配性能消耗
+		//[修改策略]：通过索引直接获取
+		//[修改人]：李成 2023/02/23
 		void CPointCloud::SetClassification(PointId idx, uint32_t label)
 		{
 			_pcv.points[idx].label = label;
@@ -118,7 +118,7 @@ namespace d3s {
 			pcv->offset_xyz = offset;
 			pcv->epsg = epsg;
 
-			PCS_INFO("[CPointCloud] ��þֲ��������� %d, ��С %lf MB.",
+			PCS_INFO("[CPointCloud] 获得局部点云数量 %d, 大小 %lf MB.",
 					 _pcv.size(),
 					 (double)_pcv.size() * sizeof(PointPCLH) / (double)(1024 * 1024));
 
@@ -170,7 +170,7 @@ namespace d3s {
 				ClassificationType label;
 				pcv->points[i].label = eUnclassified;
 
-				// ���±߽�
+				// 更新边界
 				const auto& p = pcv->points[i];
 
 				if (p.x < xmin)
@@ -194,12 +194,12 @@ namespace d3s {
 
 
 			PCS_INFO("[CPointCloud] Bound: (%lf, %lf, %lf, %lf, %lf, %lf)",
-					 xmin,
-					 ymin,
-					 zmin,
-					 xmax,
-					 ymax,
-					 zmax);
+					 xmin.load(),
+					 ymin.load(),
+					 zmin.load(),
+					 xmax.load(),
+					 ymax.load(),
+					 zmax.load());
 			PCS_INFO("[CPointCloud] Offset: (%lf, %lf, %lf)", offset.x(), offset.y(), offset.z());
 			PCS_INFO("[CPointCloud] EPSG: %d", epsg);
 		}
@@ -241,7 +241,7 @@ namespace d3s {
 			std::vector<int> indices(pcv->points.size());
 			std::iota(indices.begin(), indices.end(), 0);
 
-			// ŷʽ����
+			// 欧式聚类
 			std::vector<std::vector<int>> clusters;
 			EuclideanVoxelCluster(pcv,
 								  indices,
@@ -264,8 +264,8 @@ namespace d3s {
 				}
 			}
 
-			PCS_INFO("[CPointCloud] ���ƽ���(radius=%lf, "
-					 "minPts=%d)�������(%d/%d)����ʱ %.3f s.",
+			PCS_INFO("[CPointCloud] 点云降噪(radius=%lf, "
+				"minPts=%d)后点云数(%d/%d)，耗时 %.3f s.",
 					 radius,
 					 minPts,
 					 inliers.size(),
@@ -290,8 +290,8 @@ namespace d3s {
 			denoiseStatistical(*pcv, indices, meanK, stdMul, inliers, outliers);
 
 
-			PCS_INFO("[CPointCloud] ���ƽ���(meanK=%d, "
-					 "stdMul=%lf)�������(%d/%d)����ʱ %.3f s.",
+			PCS_INFO("[CPointCloud] 点云降噪(meanK=%d, "
+				"stdMul=%lf)后点云数(%d/%d)，耗时 %.3f s.",
 					 meanK,
 					 stdMul,
 					 inliers.size(),
@@ -322,7 +322,7 @@ namespace d3s {
 
 				pcv->points[nTempIndex].label = eUnclassified;
 
-				// ���±߽�
+				// 更新边界
 				const auto& p = pcv->points[nTempIndex];
 
 				if (p.x < xmin)

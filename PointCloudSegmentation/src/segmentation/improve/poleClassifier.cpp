@@ -1,4 +1,4 @@
-#include <src/segmentation/improve/poleClassifier.h>
+﻿#include <src/segmentation/improve/poleClassifier.h>
 #include <src/segmentation/gridCell.h>
 #include <src/segmentation/pylonCommon.h>
 #include <src/algorithm/math.h>

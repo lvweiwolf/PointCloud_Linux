@@ -1,4 +1,4 @@
-#include <src/core/private/spatials.h>
+﻿#include <src/core/private/spatials.h>
 #include <src/core/private/filters.h>
 #include <src/utils/logging.h>
 #include <src/utils/timer.h>

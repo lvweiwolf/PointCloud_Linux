@@ -1,4 +1,4 @@
-#ifndef POINTCLOUDMANAGERDEF_H_
+﻿#ifndef POINTCLOUDMANAGERDEF_H_
 #define POINTCLOUDMANAGERDEF_H_
 
 #include <LasFile/OsgDefines.h>

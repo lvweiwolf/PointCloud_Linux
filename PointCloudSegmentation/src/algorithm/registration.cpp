@@ -1,4 +1,4 @@
-#include <src/algorithm/registration.h>
+﻿#include <src/algorithm/registration.h>
 #include <src/algorithm/icp_fast_robust.h>
 #include <src/utils/logging.h>
 
@@ -20,7 +20,7 @@ namespace d3s {
 				vertices_target.rowwise().maxCoeff() - vertices_target.rowwise().minCoeff();
 			double scale = std::max(source_scale.norm(), target_scale.norm());
 
-			// PCS_DEBUG("[Registration] scale = %lf", scale);
+			 PCS_DEBUG("[Registration] scale = %lf", scale);
 
 			vertices_input /= scale;
 			vertices_target /= scale;
@@ -44,7 +44,7 @@ namespace d3s {
 			spars.print_icpn = false;
 
 			// 执行配准
-			// PCS_DEBUG("[Registration] 开始执行配准...");
+			 PCS_DEBUG("[Registration] 开始执行配准...");
 
 			FastRobustICP<3> fricp;
 			double begin_reg = omp_get_wtime();
@@ -193,8 +193,8 @@ namespace d3s {
 			double end_reg = omp_get_wtime();
 			double time = end_reg - begin_reg;
 
-			// PCS_DEBUG("[Registration] 配准完成, MSE=%lf,  Iters=%d, Time=%.3f s.", mse, nIter,
-			// time);
+			PCS_DEBUG("[Registration] 配准完成, MSE=%lf,  Iters=%d, Time=%.3f s.", mse, nIter,
+				time);
 
 			return true;
 		}

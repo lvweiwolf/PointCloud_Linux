@@ -1,4 +1,4 @@
-#include <LasFile/PointCloudPageLod.h>
+﻿#include <LasFile/PointCloudPageLod.h>
 #include <LasFile/IPageLodAcceptHandler.h>
 #include <LasFile/SamplesOnOffGeometry.h>
 #include <LasFile/PointCloudToolkit.h>
@@ -941,8 +941,7 @@ void CPointCloudpagedLodSaveLoader::ObjectLoad(osg::ref_ptr<osg::Object>& pObjec
 		pObject = new CPointCloudpagedLod;
 	}
 
-	osg::ref_ptr<CPointCloudpagedLod> pPageLod =
-		osg::dynamic_pointer_cast<CPointCloudpagedLod>(pObject);
+	osg::ref_ptr<CPointCloudpagedLod> pPageLod = osg::dynamic_pointer_cast<CPointCloudpagedLod>(pObject);
 	if (NULL == pPageLod)
 		return;
 
@@ -969,8 +968,7 @@ void CPointCloudpagedLodSaveLoader::ObjectSave(osg::ref_ptr<osg::Object> pObject
 	if (NULL == pDataStream || NULL == pObject.get())
 		return;
 
-	osg::ref_ptr<CPointCloudpagedLod> pPageLod =
-		osg::dynamic_pointer_cast<CPointCloudpagedLod>(pObject);
+	osg::ref_ptr<CPointCloudpagedLod> pPageLod = osg::dynamic_pointer_cast<CPointCloudpagedLod>(pObject);
 	if (NULL == pPageLod)
 		return;
 

@@ -4,11 +4,13 @@ aux_source_directory(include INC_SRC)
 aux_source_directory(cstring STRING_SRC)
 aux_source_directory(Data DATA_SRC)
 aux_source_directory(Tool STRING_SRC)
+aux_source_directory(Log LOG_SRC)
 
 list(APPEND SOURCES ${INC_SRC} 
 					${STRING_SRC} 
                     ${DATA_SRC} 
-                    ${STRING_SRC})
+                    ${STRING_SRC}
+                    ${LOG_SRC})
 
 add_library(CommonTools SHARED 
 	 ${SOURCES}

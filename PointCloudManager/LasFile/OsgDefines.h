@@ -1,4 +1,4 @@
-#ifndef OSGDEFINES_H_
+﻿#ifndef OSGDEFINES_H_
 #define OSGDEFINES_H_
 
 #include <LasFile/PointCloudToolDefine.h>

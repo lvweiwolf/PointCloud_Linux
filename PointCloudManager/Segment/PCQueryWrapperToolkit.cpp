@@ -1,4 +1,4 @@
-#include <Segment/PCQueryWrapperToolkit.h>
+﻿#include <Segment/PCQueryWrapperToolkit.h>
 #include <Segment/PointCloudBoxQuery.h>
 #include <LasFile/PointCloudToolkit.h>
 #include <BusinessNode/BnsPointCloudNode.h>

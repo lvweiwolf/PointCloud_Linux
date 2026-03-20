@@ -1,4 +1,4 @@
-#include <src/reconstruct/pylonMatching.h>
+﻿#include <src/reconstruct/pylonMatching.h>
 #include <src/core/api.h>
 #include <src/core/private/filters.h>
 #include <src/core/private/statistics.h>
@@ -100,7 +100,9 @@ namespace d3s {
 					transform = matrix;
 				}
 
-				PCS_INFO("[PylonReconstruction] %s RMS: %lf", GetPathBaseName(filename), rms);
+				PCS_INFO("[PylonReconstruction] %s RMS: %lf",
+						 GetPathBaseName(filename).c_str(),
+						 rms);
 			}
 
 			std::sort(rank.begin(), rank.end(), [](const auto& lhs, const auto& rhs) {

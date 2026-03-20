@@ -1,4 +1,4 @@
-#include <src/service/Recognition.h>
+﻿#include <src/service/Recognition.h>
 #include <src/utils/logging.h>
 #include <src/utils/misc.h>
 

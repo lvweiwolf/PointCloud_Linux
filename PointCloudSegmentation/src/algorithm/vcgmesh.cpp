@@ -1,4 +1,4 @@
-#include <src/algorithm/vcgmesh.h>
+﻿#include <src/algorithm/vcgmesh.h>
 #include <src/utils/logging.h>
 
 #include <vcg/math/quadric.h>

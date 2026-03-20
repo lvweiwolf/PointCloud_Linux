@@ -1,4 +1,4 @@
-
+﻿
 #include <Segment/PCAutoSegmentToolkit.h>
 #include <Segment/PCQueryWrapperToolkit.h>
 #include <BusinessNode/PCNodeType.h>
@@ -10,6 +10,7 @@
 #include <Tool/FileToolkit.h>
 
 #include <numeric>
+#include <include/Log.h>
 
 // 自动分类包围盒最大点数
 const int INT_AUTO_CLASSIFY_BOX_MAX_POINTS_SIZE = 32000000;
@@ -140,11 +141,11 @@ void CPCAutoSegmentToolkit::SegmentProgress(CAutoSegmentFileLoadSaveThread* pThr
 
 		// 自动分类
 		{
-			// d3s::CTimeLog timeRecord(L"第 %d 个局部点云分类耗时:", i);
+			 d3s::CTimeLog timeRecord(L"第 %d 个局部点云分类耗时:", i);
 
 			if (!SegmentInternel(segmentParam, pPointCloud.get(), eSegment))
 			{
-				// d3s::CLog::Warn(L"第 %d 个局部点云分类失败", i);
+				 d3s::CLog::Warn(L"第 %d 个局部点云分类失败", i);
 				continue;
 			}
 		}
@@ -174,7 +175,7 @@ void RemoveCluster(const std::set<unsigned>& clearCluter, LPCTSTR strPrj)
 	pCurTxn->SetNextTxn(pCluterTxn);*/
 }
 
-void CPCAutoSegmentToolkit::Segment(
+void CPCAutoSegmentToolkit::Segment( 
 	const std::vector<pc::data::CModelNodePtr>& vPointCloudElements,
 	pc::data::SegmentParam segmentParam,
 	std::map<unsigned, osg::BoundingBox>& clusterBoxMap,
@@ -187,7 +188,7 @@ void CPCAutoSegmentToolkit::Segment(
 	{
 		if (vPointCloudElements.size() == 0)
 		{
-			// d3s::CLog::Warn(L"CPCAutoSegmentToolkit::Segment 点云参数为空!");
+			 d3s::CLog::Warn(L"CPCAutoSegmentToolkit::Segment 点云参数为空!");
 			return;
 		}
 		if (nullptr != vPointCloudElements.front())
@@ -203,7 +204,7 @@ void CPCAutoSegmentToolkit::Segment(
 			segmentParam._offset_xyz = bnsProject.getBasePos();
 		}
 
-		// d3s::CTimeLog allTimeRecord(L"自动分类耗时：");
+		 d3s::CTimeLog allTimeRecord(L"自动分类耗时：");
 
 		// 计算包围框
 		std::vector<osg::BoundingBox> vDataBounds;
@@ -664,13 +665,13 @@ bool CPCAutoSegmentToolkit::SegmentInternel(const pc::data::SegmentParam& segmen
 
 	if (!doc.LoadFile(strCfgFilePath, toolkit::fmtXMLUTF8))
 	{
-		// d3s::CLog::Error(L"(%s) 文件读取失败!", strCfgFilePath);
+		 d3s::CLog::Error(L"(%s) 文件读取失败!", (LPCTSTR)strCfgFilePath);
 		return false;
 	}
 	toolkit::CXmlElement* pRoot = doc.GetElementRoot();
 	if (nullptr == pRoot)
 	{
-		// d3s::CLog::Error(L"文件根节点获取失败!");
+		 d3s::CLog::Error(L"文件根节点获取失败!");
 		return false;
 	}
 
@@ -681,7 +682,7 @@ bool CPCAutoSegmentToolkit::SegmentInternel(const pc::data::SegmentParam& segmen
 									segmentParam._strTopographicFeatures,
 									pCloud))
 	{
-		// d3s::CLog::Error(L"CPCAutoSegmentToolkit::SegmentInternel 地面分类失败!");
+		 d3s::CLog::Error(L"CPCAutoSegmentToolkit::SegmentInternel 地面分类失败!");
 	}
 
 
@@ -689,19 +690,19 @@ bool CPCAutoSegmentToolkit::SegmentInternel(const pc::data::SegmentParam& segmen
 	if (eSegment == eAutoSegment &&
 		!PowerCorridorsSegmentInternel(pRoot, strCfgPath, segmentParam, pCloud))
 	{
-		// d3s::CLog::Error(L"CPCAutoSegmentToolkit::SegmentInternel 导线分类失败!");
+		 d3s::CLog::Error(L"CPCAutoSegmentToolkit::SegmentInternel 导线分类失败!");
 	}
 
 	// 环境分类
 	if (eSegment == eAutoSegment && !EnvironmentsSegmentInternel(pRoot, strCfgPath, pCloud))
 	{
-		// d3s::CLog::Error(L"CPCAutoSegmentToolkit::SegmentInternel 环境分类失败!");
+		 d3s::CLog::Error(L"CPCAutoSegmentToolkit::SegmentInternel 环境分类失败!");
 	}
 
 	// 单木分割
 	if (eSegment == eTreeIndividual && !TreeIndividualSegmentInternel(pRoot, strCfgPath, pCloud))
 	{
-		// d3s::CLog::Error(L"CPCAutoSegmentToolkit::SegmentInternel 单木分割失败!");
+		 d3s::CLog::Error(L"CPCAutoSegmentToolkit::SegmentInternel 单木分割失败!");
 	}
 
 	return true;
@@ -715,14 +716,14 @@ bool CPCAutoSegmentToolkit::TopographicSegmentInternel(toolkit::CXmlElement* pRo
 	if (nullptr == pRoot || strCfgPath.IsEmpty() || strTopographicFeatures.IsEmpty() ||
 		!pCloud.valid())
 	{
-		// d3s::CLog::Error(L"CPCAutoSegmentToolkit::TopographicSegmentInternel 参数错误!");
+		 d3s::CLog::Error(L"CPCAutoSegmentToolkit::TopographicSegmentInternel 参数错误!");
 		return false;
 	}
 	toolkit::CXmlElement* pTopographicFeaturesElement =
 		pRoot->GetChildElementAt(L"TopographicFeatures");
 	if (nullptr == pTopographicFeaturesElement)
 	{
-		// d3s::CLog::Error(L"配置文件TopographicFeatures子节点为空!");
+		 d3s::CLog::Error(L"配置文件TopographicFeatures子节点为空!");
 		return false;
 	}
 	toolkit::CXmlElements* pFeaturesElements = pTopographicFeaturesElement->GetChildElements(TRUE);
@@ -752,13 +753,13 @@ bool CPCAutoSegmentToolkit::PowerCorridorsSegmentInternel(
 	if (nullptr == pRoot || strCfgPath.IsEmpty() || segmentParam._strVolLevel.IsEmpty() ||
 		!pCloud.valid())
 	{
-		// d3s::CLog::Error(L"CPCAutoSegmentToolkit::PowerCorridorsSegmentInternel 参数错误!");
+		 d3s::CLog::Error(L"CPCAutoSegmentToolkit::PowerCorridorsSegmentInternel 参数错误!");
 		return false;
 	}
 	toolkit::CXmlElement* pLineVoltageLevelElement = pRoot->GetChildElementAt(L"LineVoltageLevel");
 	if (nullptr == pLineVoltageLevelElement)
 	{
-		// d3s::CLog::Error(L"配置文件LineVoltageLevel子节点为空!");
+		 d3s::CLog::Error(L"配置文件LineVoltageLevel子节点为空!");
 		return false;
 	}
 	toolkit::CXmlElements* pLevelElements = pLineVoltageLevelElement->GetChildElements(TRUE);
@@ -785,13 +786,13 @@ bool CPCAutoSegmentToolkit::EnvironmentsSegmentInternel(toolkit::CXmlElement* pR
 {
 	if (nullptr == pRoot || strCfgPath.IsEmpty() || !pCloud.valid())
 	{
-		// d3s::CLog::Error(L"CPCAutoSegmentToolkit::EnvironmentsSegmentInternel 参数错误!");
+		 d3s::CLog::Error(L"CPCAutoSegmentToolkit::EnvironmentsSegmentInternel 参数错误!");
 		return false;
 	}
 	toolkit::CXmlElement* pEnvironmentsElement = pRoot->GetChildElementAt(L"Environments");
 	if (nullptr == pEnvironmentsElement)
 	{
-		// d3s::CLog::Error(L"配置文件Environments子节点为空!");
+		 d3s::CLog::Error(L"配置文件Environments子节点为空!");
 		return false;
 	}
 	return SegmentInternel(pCloud,
@@ -805,13 +806,13 @@ bool CPCAutoSegmentToolkit::TreeIndividualSegmentInternel(toolkit::CXmlElement* 
 {
 	if (nullptr == pRoot || strCfgPath.IsEmpty() || !pCloud.valid())
 	{
-		// d3s::CLog::Error(L"CPCAutoSegmentToolkit::TreeIndividualSegmentInternel 参数错误!");
+		 d3s::CLog::Error(L"CPCAutoSegmentToolkit::TreeIndividualSegmentInternel 参数错误!");
 		return false;
 	}
 	toolkit::CXmlElement* pTreeIndividualElement = pRoot->GetChildElementAt(L"TreeIndividual");
 	if (nullptr == pTreeIndividualElement)
 	{
-		// d3s::CLog::Error(L"配置文件TreeIndividual子节点为空!");
+		 d3s::CLog::Error(L"配置文件TreeIndividual子节点为空!");
 		return false;
 	}
 	return SegmentInternel(pCloud,
@@ -827,8 +828,7 @@ bool CPCAutoSegmentToolkit::SegmentInternel(
 {
 	if (nullptr == pCloud.get() || !CFileToolkit::FileExist(strCfgPath))
 	{
-		// d3s::CLog::Error(L"CPCAutoSegmentToolkit::SegmentInternel
-		// 点云为空或分割配置文件不存在!");
+		 d3s::CLog::Error(L"CPCAutoSegmentToolkit::SegmentInternel 点云为空或分割配置文件不存在!");
 		return false;
 	}
 
@@ -836,7 +836,7 @@ bool CPCAutoSegmentToolkit::SegmentInternel(
 		d3s::pcs::CreateSegmentation(eSegmentationType);
 	if (nullptr == pSegment)
 	{
-		// d3s::CLog::Error(L"ICloudSegmentation 创建失败");
+		 d3s::CLog::Error(L"ICloudSegmentation 创建失败");
 		return false;
 	}
 	pSegment->SetCloudInput(pCloud);
@@ -845,7 +845,7 @@ bool CPCAutoSegmentToolkit::SegmentInternel(
 
 	if (!options.valid())
 	{
-		// d3s::CLog::Error(L"IOptionsPtr 创建失败");
+		 d3s::CLog::Error(L"IOptionsPtr 创建失败");
 		return false;
 	}
 
@@ -865,7 +865,7 @@ bool CPCAutoSegmentToolkit::SegmentInternel(
 
 			if (!_roadVectorize.valid())
 			{
-				// d3s::CLog::Error(L"chinese_road.zip 读取失败");
+				 d3s::CLog::Error(L"chinese_road.zip 读取失败");
 				return false;
 			}
 		}

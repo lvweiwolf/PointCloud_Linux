@@ -1,4 +1,4 @@
-#include <src/algorithm/geometry2d_op.h>
+﻿#include <src/algorithm/geometry2d_op.h>
 
 #include <CGAL/Exact_predicates_exact_constructions_kernel.h>
 #include <CGAL/Gps_circle_segment_traits_2.h>

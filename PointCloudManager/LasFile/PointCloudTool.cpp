@@ -1,4 +1,4 @@
-#include <LasFile/PointCloudTool.h>
+﻿#include <LasFile/PointCloudTool.h>
 #include <LasFile/PointCloudPageLod.h>
 #include <LasFile/PointCloudPropertyTool.h>
 #include <LasFile/PointCloudToolkit.h>

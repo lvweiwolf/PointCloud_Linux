@@ -1,4 +1,4 @@
-#ifndef APPROXIMATE_PMF_HPP_
+﻿#ifndef APPROXIMATE_PMF_HPP_
 #define APPROXIMATE_PMF_HPP_
 
 #include <src/algorithm/approximate_pmf.h>

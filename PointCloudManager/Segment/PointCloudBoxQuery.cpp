@@ -1,4 +1,4 @@
-#include <Segment/PointCloudBoxQuery.h>
+﻿#include <Segment/PointCloudBoxQuery.h>
 #include <Segment/PCQueryWrapperToolkit.h>
 #include <Segment/PagedLodPointsVisitor.h>
 

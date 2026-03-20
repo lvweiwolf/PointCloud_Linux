@@ -1,4 +1,4 @@
-#include <src/io/tileToLod.h>
+﻿#include <src/io/tileToLod.h>
 #include <src/utils/logging.h>
 
 #include <osg/Geode>
@@ -164,7 +164,7 @@ namespace d3s {
 
 				if (!build)
 				{
-					PCS_ERROR("[pcl::io::TileToLOD::Generate] KDTree ����ʧ�� .");
+					PCS_ERROR("[pcl::io::TileToLOD::Generate] KDTree 生成失败 .");
 					return false;
 				}
 

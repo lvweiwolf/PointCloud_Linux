@@ -1,4 +1,4 @@
-#include <LasFile/PointCloudToolkit.h>
+﻿#include <LasFile/PointCloudToolkit.h>
 #include <LasFile/PointCloudToolDefine.h>
 
 #include <Tool/FileToolkit.h>

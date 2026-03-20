@@ -1,10 +1,12 @@
-#include <ProjectManager/ProjectManagerTool.h>
+﻿#include <ProjectManager/ProjectManagerTool.h>
 #include <BusinessNode/PCNodeType.h>
 
 #include <Tool/ModelNodeHelper.h>
+#include <include/Log.h>
 
 CBnsProjectNode CProjectManagerTool::LoadProject(const CString& strFile)
 {
+	d3s::CLog::Info("加载proje");
 	pc::data::CModelNodePtr pProjectNode = nullptr;
 	pc::data::CModelNodeXmlHelper::LoadFromFile(strFile, pProjectNode);
 	if (nullptr == pProjectNode)

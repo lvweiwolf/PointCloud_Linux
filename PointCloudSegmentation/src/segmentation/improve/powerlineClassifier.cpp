@@ -1,4 +1,4 @@
-#include <src/segmentation/improve/powerlineClassifier.h>
+﻿#include <src/segmentation/improve/powerlineClassifier.h>
 #include <src/segmentation/gridCell.h>
 #include <src/algorithm/geometry2d_op.h>
 #include <src/core/api.h>

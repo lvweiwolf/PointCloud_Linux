@@ -1,4 +1,4 @@
-
+﻿
 #include <Segment/AutoSegmentFileLoadSaveThread.h>
 #include <Segment/PointCloudBoxQuery.h>
 #include <Segment/PointCloudBoxQuery.h>

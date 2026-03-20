@@ -1,4 +1,4 @@
-#include <LasFile/SamplesOnOffGeometry.h>
+﻿#include <LasFile/SamplesOnOffGeometry.h>
 
 #include <GL/gl.h>
 

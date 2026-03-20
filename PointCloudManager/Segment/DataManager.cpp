@@ -1,4 +1,4 @@
-#include <Segment/DataManager.h>
+﻿#include <Segment/DataManager.h>
 
 #include <include/cstring.h>
 

@@ -1,4 +1,4 @@
-#include <src/core/private/meshProcess.h>
+﻿#include <src/core/private/meshProcess.h>
 #include <src/core/private/simpleMesh.h>
 #include <src/algorithm/vcgmesh.h>
 #include <src/utils/logging.h>

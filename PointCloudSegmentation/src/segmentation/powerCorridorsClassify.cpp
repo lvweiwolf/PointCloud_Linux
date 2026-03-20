@@ -1,4 +1,4 @@
-#include <src/segmentation/powerCorridorsClassify.h>
+﻿#include <src/segmentation/powerCorridorsClassify.h>
 #include <src/segmentation/gridCell.h>
 #include <src/segmentation/pylonLocation.h>
 

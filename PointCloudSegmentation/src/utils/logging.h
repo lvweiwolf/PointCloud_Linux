@@ -1,4 +1,4 @@
-//////////////////////////////////////////////////////////////////////
+﻿//////////////////////////////////////////////////////////////////////
 // 文件名称：logging.h
 // 功能描述：Google系日志工具
 // 创建标识：吕伟	2021/2/4
@@ -10,19 +10,21 @@
 #define LOGGING_H_
 
 #include <src/utils/stringutil.h>
-#include <src/d3/Log.h>
+#include <include/Log.h>
+#include <string>
+#include <memory>
+#include <stdexcept>
+#include <mutex>
+#include <array>
+#include <cmath>
+#include <atomic>
 
-#ifdef TINYGLTF_DUMP_TO_LOG
+
 #define PCS_ERROR(...) d3s::CLog::Log(d3s::CLog::err, __VA_ARGS__)
 #define PCS_WARN(...) d3s::CLog::Log(d3s::CLog::warn, __VA_ARGS__)
 #define PCS_INFO(...) d3s::CLog::Log(d3s::CLog::info, __VA_ARGS__)
 #define PCS_DEBUG(...) d3s::CLog::Log(d3s::CLog::debug, __VA_ARGS__)
-#else
-#define PCS_ERROR(...)
-#define PCS_WARN(...)
-#define PCS_INFO(...)
-#define PCS_DEBUG(...)
-#endif
+
 
 #define STR(x) (#x)
 

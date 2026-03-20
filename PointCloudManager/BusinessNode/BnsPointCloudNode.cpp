@@ -1,4 +1,4 @@
-#include <BusinessNode/BnsPointCloudNode.h>
+﻿#include <BusinessNode/BnsPointCloudNode.h>
 
 const CString STRING_FILE_NAME = L"FileName";
 const CString STRING_DATABASE_PATH = L"DatabasePath";
