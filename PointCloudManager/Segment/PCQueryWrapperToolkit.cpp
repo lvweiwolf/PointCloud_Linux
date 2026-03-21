@@ -21,39 +21,111 @@
 
 #define MAX_TYPE 100
 
-pc::data::SDenoiseCfg ReadDenoiseParam()
-{
-	pc::data::SDenoiseCfg denoiseLevel;
-	denoiseLevel.notDenoiseTypes.insert(4);
-	denoiseLevel.notDenoiseTypes.insert(5);
+namespace {
 
-	pc::data::SDenoiseParam param1;
-	param1._dRadius = 3;
-	param1._nMinPtSize = 100;
-	denoiseLevel.params.push_back(param1);
+	struct SClusterBox : public d3s::ReferenceCountObj
+	{
+		SClusterBox(std::map<unsigned, osg::BoundingBox>& clusterBoxMap,
+					const std::set<unsigned>& intTypeFind,
+					d3s::share_ptr<CClusterManager> pClusterMgr)
+			: _clusterBoxMap(clusterBoxMap), _intTypeFind(intTypeFind), _pClusterMgr(pClusterMgr)
+		{
+		}
 
-	pc::data::SDenoiseParam param2;
-	param2._dRadius = 3;
-	param2._nMinPtSize = 150;
-	denoiseLevel.params.push_back(param2);
+		std::map<unsigned, osg::BoundingBox>& _clusterBoxMap; // 簇对应的包围盒
+		std::set<unsigned> _intTypeFind;					  // 仅在指定分类下查询
+		d3s::share_ptr<CClusterManager> _pClusterMgr;		  // 簇管理器
+		tbb::mutex _mutex;									  // 互斥锁
+	};
 
-	pc::data::SDenoiseParam param3;
-	param3._dRadius = 2;
-	param3._nMinPtSize = 200;
-	denoiseLevel.params.push_back(param3);
+	struct SQueryClusterByCircular : public d3s::ReferenceCountObj
+	{
+		SQueryClusterByCircular(double dR, osg::Vec3d center)
+			: _dR(dR), _center(center), _bHasCluster(false)
+		{
+		}
 
-	pc::data::SDenoiseParam param4;
-	param4._dRadius = 2;
-	param4._nMinPtSize = 250;
-	denoiseLevel.params.push_back(param4);
+		double _dR;			// 半径
+		osg::Vec3d _center; // 圆心
+		bool _bHasCluster;	// 存在簇
+		tbb::mutex _mutex;	// 互斥锁
+	};
 
-	pc::data::SDenoiseParam param5;
-	param5._dRadius = 1;
-	param5._nMinPtSize = 300;
-	denoiseLevel.params.push_back(param5);
-	return denoiseLevel;
+	bool QueryClusterBox(pc::data::SVisitorCallbackParam& callbackParam)
+	{
+		if (nullptr == callbackParam._pTexCoordArray)
+			return false;
+
+		int nClusterID = 0;
+		CPointCloudPropertyTool::GetClusterProperty(callbackParam._pTexCoordArray,
+													callbackParam._nIndex,
+													nClusterID);
+		if (nClusterID <= 0)
+			return false;
+		auto pData = static_cast<SClusterBox*>(callbackParam._pAdditionalParam.get());
+		if (nullptr == pData || nullptr == pData->_pClusterMgr)
+			return false;
+
+		// 若提供指定分类，则只取对应分类所属簇
+		uint32_t nType = 0;
+		CPointCloudPropertyTool::GetSegmentProperty(callbackParam._pTexCoordArray,
+													callbackParam._nIndex,
+													nType);
+
+		if (!pData->_intTypeFind.empty() &&
+			pData->_intTypeFind.end() == pData->_intTypeFind.find(nType))
+		{
+			return false;
+		}
+
+		if (nullptr == pData->_pClusterMgr->FindClusterByID(nClusterID))
+		{
+			return false;
+		}
+
+		{
+			tbb::mutex::scoped_lock lock(pData->_mutex);
+			pData->_clusterBoxMap[nClusterID].expandBy(callbackParam._point);
+		}
+
+		return true;
+	}
+
+	pc::data::SDenoiseCfg ReadDenoiseParam()
+	{
+		pc::data::SDenoiseCfg denoiseLevel;
+		denoiseLevel.notDenoiseTypes.insert(4);
+		denoiseLevel.notDenoiseTypes.insert(5);
+
+		pc::data::SDenoiseParam param1;
+		param1._dRadius = 3;
+		param1._nMinPtSize = 100;
+		denoiseLevel.params.push_back(param1);
+
+		pc::data::SDenoiseParam param2;
+		param2._dRadius = 3;
+		param2._nMinPtSize = 150;
+		denoiseLevel.params.push_back(param2);
+
+		pc::data::SDenoiseParam param3;
+		param3._dRadius = 2;
+		param3._nMinPtSize = 200;
+		denoiseLevel.params.push_back(param3);
+
+		pc::data::SDenoiseParam param4;
+		param4._dRadius = 2;
+		param4._nMinPtSize = 250;
+		denoiseLevel.params.push_back(param4);
+
+		pc::data::SDenoiseParam param5;
+		param5._dRadius = 1;
+		param5._nMinPtSize = 300;
+		denoiseLevel.params.push_back(param5);
+		return denoiseLevel;
+	}
 }
 
+////////////////////////////////////////////////////////////////////////////////
 pc::data::SDenoiseCfg CPCQueryWrapperToolkit::GetDenoiseParam()
 {
 	static pc::data::SDenoiseCfg denoiseLevel = ReadDenoiseParam();
@@ -226,60 +298,6 @@ void CPCQueryWrapperToolkit::QueryBoundingBoxList(
 	}
 }
 
-struct SClusterBox : public d3s::ReferenceCountObj
-{
-	SClusterBox(std::map<unsigned, osg::BoundingBox>& clusterBoxMap,
-				const std::set<unsigned>& intTypeFind,
-				d3s::share_ptr<CClusterManager> pClusterMgr)
-		: _clusterBoxMap(clusterBoxMap), _intTypeFind(intTypeFind), _pClusterMgr(pClusterMgr)
-	{
-	}
-
-	std::map<unsigned, osg::BoundingBox>& _clusterBoxMap; // 簇对应的包围盒
-	std::set<unsigned> _intTypeFind;					  // 仅在指定分类下查询
-	d3s::share_ptr<CClusterManager> _pClusterMgr;		  // 簇管理器
-	tbb::mutex _mutex;									  // 互斥锁
-};
-
-bool QueryClusterBox(pc::data::SVisitorCallbackParam& callbackParam)
-{
-	if (nullptr == callbackParam._pTexCoordArray)
-		return false;
-
-	int nClusterID = 0;
-	CPointCloudPropertyTool::GetClusterProperty(callbackParam._pTexCoordArray,
-												callbackParam._nIndex,
-												nClusterID);
-	if (nClusterID <= 0)
-		return false;
-	auto pData = static_cast<SClusterBox*>(callbackParam._pAdditionalParam.get());
-	if (nullptr == pData || nullptr == pData->_pClusterMgr)
-		return false;
-
-	// 若提供指定分类，则只取对应分类所属簇
-	uint32_t nType = 0;
-	CPointCloudPropertyTool::GetSegmentProperty(callbackParam._pTexCoordArray,
-												callbackParam._nIndex,
-												nType);
-
-	if (!pData->_intTypeFind.empty() &&
-		pData->_intTypeFind.end() == pData->_intTypeFind.find(nType))
-	{
-		return false;
-	}
-
-	if (nullptr == pData->_pClusterMgr->FindClusterByID(nClusterID))
-	{
-		return false;
-	}
-
-	{
-		tbb::mutex::scoped_lock lock(pData->_mutex);
-		pData->_clusterBoxMap[nClusterID].expandBy(callbackParam._point);
-	}
-
-	return true;
-}
 
 
 bool CPCQueryWrapperToolkit::QueryClusterByBox(const pc::data::CModelNodeVector& pcElements,
@@ -361,8 +379,6 @@ bool CPCQueryWrapperToolkit::QueryClusterByBox(const pc::data::CModelNodeVector&
 	return true;
 }
 
-
-#if 0
 bool CPCQueryWrapperToolkit::QueryClusterByPolygn(
 	const pc::data::CModelNodeVector& pcElements,
 	const std::vector<osg::Vec3d>& polygnPnts,
@@ -371,45 +387,270 @@ bool CPCQueryWrapperToolkit::QueryClusterByPolygn(
 {
 	if (pcElements.empty())
 		return false;
-	
+
+	CBnsProjectNode bnsProject;
+
+	if (nullptr != pcElements.front())
+	{
+		pc::data::CModelNodePtr pProjectNode =
+			pcElements.front()->GetTypeParent((int)eBnsProjectRoot);
+
+		bnsProject = pProjectNode;
+	}
+
+	if (bnsProject.IsNull())
+		return false;
+
 	osg::BoundingBox box;
 	for (const auto& iter : polygnPnts)
 		box.expandBy(iter);
 
 	std::vector<pc::data::tagPagedLodFile> filePaths;
-	for (const auto& pPointCloudElement : pcElements)
+	for (const auto& pcElement : pcElements)
 	{
-		std::vector<osg::ref_ptr<CPointCloudpagedLod>> pageLods;
-		CPointCloudBoxQuery::GetLevelPagedLodList(pPointCloudElement,
+		pc::data::CModelNodeVector pageLods;
+		CPointCloudBoxQuery::GetLevelPagedLodList(pcElement,
 												  CPointCloudBoxQuery::nAllLevel,
 												  pageLods);
-		for (auto pPagedLod : pageLods)
+		for (auto pageLODNode : pageLods)
 		{
-			box.zMax() = box.zMin() = pPagedLod->GetRealBoundingBox().zMax();
-			if (nullptr == pPagedLod || !box.intersects(pPagedLod->GetRealBoundingBox()))
+			CBnsPointCloudNode bnsPageLOD = pageLODNode;
+			box.zMax() = box.zMin() = bnsPageLOD.GetRealBoundingBox().zMax();
+
+			if (nullptr == pageLODNode || !box.intersects(bnsPageLOD.GetRealBoundingBox()))
 				continue;
-			filePaths.push_back(PointCloudTool::GetPagedLodModelPath(pPagedLod));
+
+			filePaths.push_back(GetPagedLodModelPath(pageLODNode));
 		}
 	}
 
-	d3s::share_ptr<CClusterManager> pClusterMgr;
-	if (nullptr != pcElements.front())
-		pClusterMgr =
-			CClusterManagerSet::GetInst()->GetClusterManager(pcElements.front()->GetPrjID());
-	if (nullptr == pClusterMgr)
+	d3s::share_ptr<CClusterManager> clusterManager =
+		CClusterManagerSet::GetInst()->GetClusterManager(bnsProject.GetID());
+
+	if (!clusterManager.valid())
 		return false;
 
-	pc::data::SVisitorInfos visitorInfos;
-	visitorInfos._pPropVisitorCallback = QueryClusterBox;
-	visitorInfos._pAdditionalParam = new SClusterBox(clusterBoxMap, intTypeFind, pClusterMgr);
-	visitorInfos._visitorInfo._coarsePolygonPoints = polygnPnts;
-	visitorInfos._visitorType = pc::data::SVisitorInfos::ePolygonXY;
-	CTbbFind parallel(filePaths, visitorInfos);
-	CTBBParallel::For(0, filePaths.size(), parallel);
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, filePaths.size()),
+					  [&](const tbb::blocked_range<size_t>& r) {
+						  for (size_t i = r.begin(); i != r.end(); ++i)
+						  {
+							  const auto& strFilePath = filePaths.at(i);
+
+							  std::string sPointInfoFileName =
+								  CStringToolkit::CStringToUTF8(strFilePath.strPointInfoFile);
+							  std::string sPointTexFileName =
+								  CStringToolkit::CStringToUTF8(strFilePath.strPointTexFile);
+
+							  osg::ref_ptr<osg::Node> node =
+								  CPointCloudToolkit::ReadNode(sPointInfoFileName,
+															   sPointTexFileName);
+							  if (!node.valid())
+								  return;
+
+							  pc::data::SVisitorInfos visitorInfos;
+							  visitorInfos._pPropVisitorCallback = QueryClusterBox;
+							  visitorInfos._pAdditionalParam =
+								  new SClusterBox(clusterBoxMap, intTypeFind, clusterManager);
+							  visitorInfos._visitorInfo._coarsePolygonPoints = polygnPnts;
+
+							  CPcPropVisitorCommand::Excute(node, visitorInfos);
+						  }
+					  });
+
 	return true;
 }
 
-#endif
+bool CPCQueryWrapperToolkit::QueryClusterAndTypeByPolygn(
+	LPCTSTR strPrjId,
+	const std::vector<osg::Vec3d>& editPolygons,
+	std::vector<int>& clusterIdsByEdit,
+	std::vector<int>& clusterIdsByModify)
+{
+	osg::BoundingBox polygonBox;
+
+	for (auto& point : editPolygons)
+		polygonBox.expandBy(point);
+
+	auto clusterManager = CClusterManagerSet::GetInst()->GetClusterManager(strPrjId);
+	if (!clusterManager.valid())
+		return false;
+
+	std::map<int, d3s::share_ptr<CClusterItem>> clusterItemMap = clusterManager->GetClusterMap();
+	for (auto pIter : clusterItemMap)
+	{
+		CClusterItem::PolygonList polygonList = pIter.second->GetPolygons();
+		// 先用包围盒判断，减少计算次数
+		osg::BoundingBox clusterBox = pIter.second->GetBoundingBox();
+		clusterBox.zMin() = polygonBox.zMin();
+		clusterBox.zMax() = polygonBox.zMax();
+		if (!polygonBox.intersects(clusterBox))
+			continue;
+
+		bool bIsIntersect = false; // 是否相交
+		bool bIsContains = true;   // 是否包含
+		for (auto& polygon : polygonList)
+		{
+			for (auto& point : polygon)
+			{
+				// 点是否在选择点内
+				if (!CPointCloudToolkit::PtInPolygon((osg::Vec3d&)point, editPolygons))
+					bIsContains = false;
+				else
+					bIsIntersect = true;
+			}
+		}
+
+		// 可能是反向包含，多边形在簇内部
+		if (!bIsIntersect)
+		{
+			for (auto& point : editPolygons)
+			{
+				for (auto& polygon : polygonList)
+				{
+					if (polygon.size() < 3)
+						continue;
+
+					// 点是否在选择点内
+					if (CPointCloudToolkit::PtInPolygon(point, polygon))
+					{
+						bIsIntersect = true;
+						break;
+					}
+					if (bIsIntersect)
+						break;
+				}
+			}
+		}
+
+		if (bIsContains)
+			clusterIdsByModify.push_back(pIter.first);
+		else if (bIsIntersect)
+			clusterIdsByEdit.push_back(pIter.first);
+	}
+
+	return true;
+}
+
+
+bool CPCQueryWrapperToolkit::QueryHasClusterInyCircular(
+	const pc::data::CModelNodeVector& pcElements,
+	osg::Vec3d center,
+	double dR)
+{
+	if (pcElements.empty())
+		return false;
+
+	CBnsProjectNode bnsProject;
+
+	if (nullptr != pcElements.front())
+	{
+		pc::data::CModelNodePtr pProjectNode =
+			pcElements.front()->GetTypeParent((int)eBnsProjectRoot);
+
+		bnsProject = pProjectNode;
+	}
+
+	if (bnsProject.IsNull())
+		return false;
+
+	// 通过圆构造包围盒，使用包围盒搜索，再在回调内判断是否在圆内
+	osg::BoundingBox box;
+	box.expandBy(osg::Vec3d(center.x() - dR, center.y(), 0));
+	box.expandBy(osg::Vec3d(center.x() + dR, center.y(), 0));
+	box.expandBy(osg::Vec3d(center.x(), center.y() - dR, 0));
+	box.expandBy(osg::Vec3d(center.x(), center.y() + dR, 0));
+
+	std::vector<pc::data::tagPagedLodFile> filePaths;
+	for (const auto& pPointCloudElement : pcElements)
+	{
+		pc::data::CModelNodeVector pageLods;
+		CPointCloudBoxQuery::GetLevelPagedLodList(pPointCloudElement,
+												  CPointCloudBoxQuery::nAllLevel,
+												  pageLods);
+		for (auto pageLODNode : pageLods)
+		{
+			CBnsPointCloudNode bnsPageLOD = pageLODNode;
+			box.zMax() = box.zMin() = bnsPageLOD.GetRealBoundingBox().zMax();
+			if (nullptr == pageLODNode || !box.intersects(bnsPageLOD.GetRealBoundingBox()))
+				continue;
+
+			filePaths.push_back(GetPagedLodModelPath(pageLODNode));
+		}
+	}
+
+	d3s::share_ptr<CClusterManager> clusterManager =
+		CClusterManagerSet::GetInst()->GetClusterManager(bnsProject.GetID());
+
+	if (!clusterManager.valid())
+		return false;
+
+	pc::data::SVisitorInfos visitorInfos;
+	visitorInfos._pAdditionalParam = new SQueryClusterByCircular(dR, center);
+	visitorInfos._visitorInfo._boundingBox = box;
+	visitorInfos._visitorType = pc::data::SVisitorInfos::eBoundingBoxXY;
+	visitorInfos._pPropVisitorCallback = [](pc::data::SVisitorCallbackParam& callbackParam) {
+		if (nullptr == callbackParam._pTexCoordArray)
+			return false;
+
+		auto pData = (SQueryClusterByCircular*)(callbackParam._pAdditionalParam.get());
+		if (nullptr == pData)
+			return false;
+
+		int nClusterID = 0;
+		CPointCloudPropertyTool::GetClusterProperty(callbackParam._pTexCoordArray,
+													callbackParam._nIndex,
+													nClusterID);
+		if (nClusterID == INVALID_CLUSTER_ID)
+			return false;
+
+		auto point = callbackParam._point;
+		point.z() = pData->_center.z();
+
+		if ((point - pData->_center).length() <= pData->_dR)
+		{
+			tbb::mutex::scoped_lock lock(pData->_mutex);
+			pData->_bHasCluster = true;
+			callbackParam._bExitTraversal = true;
+		}
+
+		return true;
+	};
+
+	tbb::parallel_for(
+		tbb::blocked_range<size_t>(0, filePaths.size()),
+		[&](const tbb::blocked_range<size_t>& r) {
+			for (size_t i = r.begin(); i != r.end(); ++i)
+			{
+				auto pData = (SQueryClusterByCircular*)(visitorInfos._pAdditionalParam.get());
+
+				if (nullptr != pData)
+				{
+					tbb::mutex::scoped_lock lock(pData->_mutex);
+					if (pData->_bHasCluster)
+						return;
+				}
+
+				const auto& strFilePath = filePaths.at(i);
+
+				std::string sPointInfoFileName =
+					CStringToolkit::CStringToUTF8(strFilePath.strPointInfoFile);
+				std::string sPointTexFileName =
+					CStringToolkit::CStringToUTF8(strFilePath.strPointTexFile);
+
+				osg::ref_ptr<osg::Node> node =
+					CPointCloudToolkit::ReadNode(sPointInfoFileName, sPointTexFileName);
+
+				if (!node.valid())
+					return;
+
+				CPcPropVisitorCommand::Excute(node, visitorInfos);
+			}
+		});
+
+	auto pData = (SQueryClusterByCircular*)(visitorInfos._pAdditionalParam.get());
+	return pData->_bHasCluster;
+}
+
 
 void CPCQueryWrapperToolkit::GetEigenVectors(osg::Vec3d& outMajorPoint,
 											 osg::Vec3d& outMiddlePoint,
