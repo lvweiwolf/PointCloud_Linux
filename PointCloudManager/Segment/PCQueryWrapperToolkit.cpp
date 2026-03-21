@@ -1,11 +1,23 @@
 ﻿#include <Segment/PCQueryWrapperToolkit.h>
 #include <Segment/PointCloudBoxQuery.h>
+#include <Segment/PropertyVisitorCommand.h>
 #include <LasFile/PointCloudToolkit.h>
+#include <LasFile/PointCloudPropertyTool.h>
+#include <BusinessNode/PCNodeType.h>
+#include <BusinessNode/BnsProjectNode.h>
 #include <BusinessNode/BnsPointCloudNode.h>
 
+#include <include/ClusterManagerSet.h>
+
 #include <Eigen/Core>
+
 #include <pcl/common/centroid.h>
 #include <pcl/segmentation/sac_segmentation.h>
+
+#include <osg/ComputeBoundsVisitor>
+
+#include <tbb/parallel_for.h>
+#include <tbb/blocked_range.h>
 
 #define MAX_TYPE 100
 
@@ -48,51 +60,59 @@ pc::data::SDenoiseCfg CPCQueryWrapperToolkit::GetDenoiseParam()
 	return denoiseLevel;
 }
 
-pc::data::tagPagedLodFile CPCQueryWrapperToolkit::GetPagedLodModelPath(pc::data::CModelNodePtr pPagedLod)
+pc::data::tagPagedLodFile CPCQueryWrapperToolkit::GetPagedLodModelPath(
+	pc::data::CModelNodePtr pPagedLod)
 {
 	CBnsPointCloudNode pPointCloudPagedLod = pPagedLod;
 	if (pPointCloudPagedLod.IsNull())
-		return{};
+		return {};
 
 	CString strPointInfoFileName = pPointCloudPagedLod.getFileName();
 	if (strPointInfoFileName.IsEmpty())
-		return{};
+		return {};
 	CString strPointInfoFilePath = pPointCloudPagedLod.getDatabasePath();
 	strPointInfoFilePath.TrimRight(L"/");
 	strPointInfoFilePath.TrimRight(L"\\");
 	strPointInfoFilePath += L"/";
 	strPointInfoFilePath += strPointInfoFileName;
 
-	//strTexFileName.replace(strTexFileName.find(pc::data::strFilExt), strTexFileName.length(), pc::data::TexPostStr + pc::data::strFilExt);
+	// strTexFileName.replace(strTexFileName.find(pc::data::strFilExt), strTexFileName.length(),
+	// pc::data::TexPostStr + pc::data::strFilExt);
 	std::string strTexFileName = CStringToolkit::CStringToUTF8(strPointInfoFileName);
-	strTexFileName.replace(strTexFileName.find(pc::data::strFilExt), strTexFileName.length(), pc::data::TexPostStr + pc::data::strFilExt);
+	strTexFileName.replace(strTexFileName.find(pc::data::strFilExt),
+						   strTexFileName.length(),
+						   pc::data::TexPostStr + pc::data::strFilExt);
 	CString strPointTexFilePath = pPointCloudPagedLod.getDatabasePath();
 	strPointTexFilePath.TrimRight(L"/");
 	strPointTexFilePath.TrimRight(L"\\");
 	strPointTexFilePath += L"/";
 	strPointTexFilePath += CStringToolkit::UTF8ToCString(strTexFileName);
 
-	return{ strPointInfoFilePath ,strPointTexFilePath };
+	return { strPointInfoFilePath, strPointTexFilePath };
 }
 
-void CPCQueryWrapperToolkit::QueryBoundingBoxList(const pc::data::CModelNodeVector& vPointCloudElements, 
-	const osg::Matrix& vpwMatrix, const std::vector<osg::Vec3d>& vSelectPoints, pc::data::PointCloudBoundToPointNum& boundToPointNum, pc::data::CModelNodeVector& vecResult)
+void CPCQueryWrapperToolkit::QueryBoundingBoxList(
+	const pc::data::CModelNodeVector& pcElements,
+	const osg::Matrix& vpwMatrix,
+	const std::vector<osg::Vec3d>& vSelectPoints,
+	pc::data::PointCloudBoundToPointNum& boundToPointNum,
+	pc::data::CModelNodeVector& vecResult)
 {
-	if (vPointCloudElements.size() == 0)
+	if (pcElements.size() == 0)
 		return;
 
-	for (auto pointElement : vPointCloudElements)
+	for (auto pcElement : pcElements)
 	{
-		CBnsPointCloudNode bnsPcNode = pointElement;
+		CBnsPointCloudNode bnsPcNode = pcElement;
 		if (bnsPcNode.IsNull())
 			continue;
 
 		if (vSelectPoints.size() == 0 ||
 			CPointCloudToolkit::JudgePolygonInModel(bnsPcNode.GetModelBoundingBox(),
-				vpwMatrix,
-				vSelectPoints))
+													vpwMatrix,
+													vSelectPoints))
 		{
-			vecResult.push_back(pointElement);
+			vecResult.push_back(pcElement);
 		}
 	}
 
@@ -105,8 +125,8 @@ void CPCQueryWrapperToolkit::QueryBoundingBoxList(const pc::data::CModelNodeVect
 	{
 		pc::data::CModelNodePtr pPointCloudElement = vecResult[i];
 		CPointCloudBoxQuery::GetLevelPagedLodList(pPointCloudElement,
-			pc::data::JINGXI_LEVEL,
-			leafPagedLodList);
+												  pc::data::JINGXI_LEVEL,
+												  leafPagedLodList);
 	}
 
 	// 获取包围盒列表
@@ -125,9 +145,9 @@ void CPCQueryWrapperToolkit::QueryBoundingBoxList(const pc::data::CModelNodeVect
 			!CPointCloudToolkit::JudgePolygonInModel(boundingBox, vpwMatrix, vSelectPoints))
 			continue;
 		pc::data::PointCloudBoundBox2D boundBox(boundingBox.xMin(),
-			boundingBox.xMax(),
-			boundingBox.yMin(),
-			boundingBox.yMax());
+												boundingBox.xMax(),
+												boundingBox.yMin(),
+												boundingBox.yMax());
 
 		// 计算点数量
 		auto findIter = boundToPointNum.find(boundBox);
@@ -142,15 +162,18 @@ void CPCQueryWrapperToolkit::QueryBoundingBoxList(const pc::data::CModelNodeVect
 	}
 }
 
-void CPCQueryWrapperToolkit::QueryBoundingBoxList(const pc::data::CModelNodeVector& vPointCloudElements, 
-	const osg::BoundingBox& boundingBox, pc::data::PointCloudBoundToPointNum& boundToPointNum, pc::data::CModelNodeVector& vecResult)
+void CPCQueryWrapperToolkit::QueryBoundingBoxList(
+	const pc::data::CModelNodeVector& pcElements,
+	const osg::BoundingBox& boundingBox,
+	pc::data::PointCloudBoundToPointNum& boundToPointNum,
+	pc::data::CModelNodeVector& vecResult)
 {
-	if (vPointCloudElements.size() == 0)
+	if (pcElements.size() == 0)
 		return;
 
-	for (auto pointElement : vPointCloudElements)
+	for (auto pcElement : pcElements)
 	{
-		CBnsPointCloudNode bnsPcNode = pointElement;
+		CBnsPointCloudNode bnsPcNode = pcElement;
 		if (bnsPcNode.IsNull())
 			continue;
 
@@ -159,7 +182,7 @@ void CPCQueryWrapperToolkit::QueryBoundingBoxList(const pc::data::CModelNodeVect
 		modelBox.zMin() = boundingBox.zMin();
 		modelBox.zMax() = boundingBox.zMax();
 		if (boundingBox.valid() && boundingBox.intersects(modelBox))
-			vecResult.push_back(pointElement);
+			vecResult.push_back(pcElement);
 	}
 	if (vecResult.size() == 0)
 		return;
@@ -170,8 +193,8 @@ void CPCQueryWrapperToolkit::QueryBoundingBoxList(const pc::data::CModelNodeVect
 	{
 		CBnsPointCloudNode bnsPcNode = vecResult[i];
 		CPointCloudBoxQuery::GetLevelPagedLodList(bnsPcNode,
-			pc::data::JINGXI_LEVEL,
-			leafPagedLodList);
+												  pc::data::JINGXI_LEVEL,
+												  leafPagedLodList);
 	}
 	if (leafPagedLodList.empty())
 		return;
@@ -191,9 +214,9 @@ void CPCQueryWrapperToolkit::QueryBoundingBoxList(const pc::data::CModelNodeVect
 			continue;
 
 		pc::data::PointCloudBoundBox2D boundBox(modelBox.xMin(),
-			modelBox.xMax(),
-			modelBox.yMin(),
-			modelBox.yMax());
+												modelBox.xMax(),
+												modelBox.yMin(),
+												modelBox.yMax());
 		// 计算点数量
 		auto findIter = boundToPointNum.find(boundBox);
 		if (boundToPointNum.end() == findIter)
@@ -203,7 +226,195 @@ void CPCQueryWrapperToolkit::QueryBoundingBoxList(const pc::data::CModelNodeVect
 	}
 }
 
-void CPCQueryWrapperToolkit::GetEigenVectors(osg::Vec3d& outMajorPoint, osg::Vec3d& outMiddlePoint, osg::Vec3d& outMinorPoint, const std::vector<osg::Vec3d>& vPoints)
+struct SClusterBox : public d3s::ReferenceCountObj
+{
+	SClusterBox(std::map<unsigned, osg::BoundingBox>& clusterBoxMap,
+				const std::set<unsigned>& intTypeFind,
+				d3s::share_ptr<CClusterManager> pClusterMgr)
+		: _clusterBoxMap(clusterBoxMap), _intTypeFind(intTypeFind), _pClusterMgr(pClusterMgr)
+	{
+	}
+
+	std::map<unsigned, osg::BoundingBox>& _clusterBoxMap; // 簇对应的包围盒
+	std::set<unsigned> _intTypeFind;					  // 仅在指定分类下查询
+	d3s::share_ptr<CClusterManager> _pClusterMgr;		  // 簇管理器
+	tbb::mutex _mutex;									  // 互斥锁
+};
+
+bool QueryClusterBox(pc::data::SVisitorCallbackParam& callbackParam)
+{
+	if (nullptr == callbackParam._pTexCoordArray)
+		return false;
+
+	int nClusterID = 0;
+	CPointCloudPropertyTool::GetClusterProperty(callbackParam._pTexCoordArray,
+												callbackParam._nIndex,
+												nClusterID);
+	if (nClusterID <= 0)
+		return false;
+	auto pData = static_cast<SClusterBox*>(callbackParam._pAdditionalParam.get());
+	if (nullptr == pData || nullptr == pData->_pClusterMgr)
+		return false;
+
+	// 若提供指定分类，则只取对应分类所属簇
+	uint32_t nType = 0;
+	CPointCloudPropertyTool::GetSegmentProperty(callbackParam._pTexCoordArray,
+												callbackParam._nIndex,
+												nType);
+
+	if (!pData->_intTypeFind.empty() &&
+		pData->_intTypeFind.end() == pData->_intTypeFind.find(nType))
+	{
+		return false;
+	}
+
+	if (nullptr == pData->_pClusterMgr->FindClusterByID(nClusterID))
+	{
+		return false;
+	}
+
+	{
+		tbb::mutex::scoped_lock lock(pData->_mutex);
+		pData->_clusterBoxMap[nClusterID].expandBy(callbackParam._point);
+	}
+
+	return true;
+}
+
+
+bool CPCQueryWrapperToolkit::QueryClusterByBox(const pc::data::CModelNodeVector& pcElements,
+											   const osg::BoundingBox& boundingBox,
+											   std::map<unsigned, osg::BoundingBox>& clusterBoxMap,
+											   const std::set<unsigned>& intTypeFind)
+{
+	if (pcElements.empty())
+		return false;
+
+	CBnsProjectNode bnsProject;
+
+	if (nullptr != pcElements.front())
+	{
+		pc::data::CModelNodePtr pProjectNode =
+			pcElements.front()->GetTypeParent((int)eBnsProjectRoot);
+
+		bnsProject = pProjectNode;
+	}
+
+	if (bnsProject.IsNull())
+		return false;
+
+	pc::data::CModelNodeVector vPagedLods;
+	for (auto& pcElement : pcElements)
+	{
+		if (nullptr == pcElement)
+			continue;
+
+		CPointCloudBoxQuery::GetLevelPagedLodList(pcElement,
+												  CPointCloudBoxQuery::nAllLevel,
+												  vPagedLods);
+	}
+
+	d3s::share_ptr<CClusterManager> clusterManager =
+		CClusterManagerSet::GetInst()->GetClusterManager(bnsProject.GetID());
+
+	if (!clusterManager.valid())
+		return false;
+
+
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, vPagedLods.size()),
+					  [&](const tbb::blocked_range<size_t>& r) {
+						  for (size_t i = r.begin(); i != r.end(); ++i)
+						  {
+							  auto modelPath = GetPagedLodModelPath(vPagedLods.at(i));
+
+							  std::string pointInfoFilename =
+								  CStringToolkit::CStringToUTF8(modelPath.strPointInfoFile);
+							  std::string pointTexFilename =
+								  CStringToolkit::CStringToUTF8(modelPath.strPointTexFile);
+
+							  auto node =
+								  CPointCloudToolkit::ReadNode(pointInfoFilename, pointTexFilename);
+
+							  if (!node.valid())
+								  return;
+
+							  osg::ComputeBoundsVisitor cbv;
+							  node->accept(cbv);
+							  osg::BoundingBox bbox = cbv.getBoundingBox();
+							  bbox.zMin() = boundingBox.zMin();
+							  bbox.zMax() = boundingBox.zMax();
+
+							  if (!boundingBox.intersects(bbox))
+								  return;
+
+							  pc::data::SVisitorInfos visitorInfos;
+							  visitorInfos._pPropVisitorCallback = QueryClusterBox;
+							  visitorInfos._pAdditionalParam =
+								  new SClusterBox(clusterBoxMap, intTypeFind, clusterManager);
+							  visitorInfos._visitorInfo._boundingBox = boundingBox;
+							  visitorInfos._visitorType = pc::data::SVisitorInfos::eBoundingBoxXY;
+
+							  CPcPropVisitorCommand::Excute(node, visitorInfos);
+						  }
+					  });
+
+	return true;
+}
+
+
+#if 0
+bool CPCQueryWrapperToolkit::QueryClusterByPolygn(
+	const pc::data::CModelNodeVector& pcElements,
+	const std::vector<osg::Vec3d>& polygnPnts,
+	std::map<unsigned, osg::BoundingBox>& clusterBoxMap,
+	const std::set<unsigned>& intTypeFind)
+{
+	if (pcElements.empty())
+		return false;
+	
+	osg::BoundingBox box;
+	for (const auto& iter : polygnPnts)
+		box.expandBy(iter);
+
+	std::vector<pc::data::tagPagedLodFile> filePaths;
+	for (const auto& pPointCloudElement : pcElements)
+	{
+		std::vector<osg::ref_ptr<CPointCloudpagedLod>> pageLods;
+		CPointCloudBoxQuery::GetLevelPagedLodList(pPointCloudElement,
+												  CPointCloudBoxQuery::nAllLevel,
+												  pageLods);
+		for (auto pPagedLod : pageLods)
+		{
+			box.zMax() = box.zMin() = pPagedLod->GetRealBoundingBox().zMax();
+			if (nullptr == pPagedLod || !box.intersects(pPagedLod->GetRealBoundingBox()))
+				continue;
+			filePaths.push_back(PointCloudTool::GetPagedLodModelPath(pPagedLod));
+		}
+	}
+
+	d3s::share_ptr<CClusterManager> pClusterMgr;
+	if (nullptr != pcElements.front())
+		pClusterMgr =
+			CClusterManagerSet::GetInst()->GetClusterManager(pcElements.front()->GetPrjID());
+	if (nullptr == pClusterMgr)
+		return false;
+
+	pc::data::SVisitorInfos visitorInfos;
+	visitorInfos._pPropVisitorCallback = QueryClusterBox;
+	visitorInfos._pAdditionalParam = new SClusterBox(clusterBoxMap, intTypeFind, pClusterMgr);
+	visitorInfos._visitorInfo._coarsePolygonPoints = polygnPnts;
+	visitorInfos._visitorType = pc::data::SVisitorInfos::ePolygonXY;
+	CTbbFind parallel(filePaths, visitorInfos);
+	CTBBParallel::For(0, filePaths.size(), parallel);
+	return true;
+}
+
+#endif
+
+void CPCQueryWrapperToolkit::GetEigenVectors(osg::Vec3d& outMajorPoint,
+											 osg::Vec3d& outMiddlePoint,
+											 osg::Vec3d& outMinorPoint,
+											 const std::vector<osg::Vec3d>& vPoints)
 {
 	if (vPoints.empty())
 	{
@@ -223,7 +434,8 @@ void CPCQueryWrapperToolkit::GetEigenVectors(osg::Vec3d& outMajorPoint, osg::Vec
 		Eigen::Matrix3f covariance;
 		pcl::compute3DCentroid(*pCloud, centroid);
 		pcl::computeCovarianceMatrixNormalized(*pCloud, centroid, covariance);
-		Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> solver(covariance, Eigen::ComputeEigenvectors);
+		Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> solver(covariance,
+															  Eigen::ComputeEigenvectors);
 		Eigen::Matrix3f eigenVectors = solver.eigenvectors();
 		Eigen::Vector3f eigenValues = solver.eigenvalues();
 		Eigen::Vector3f majorAxis;
@@ -283,7 +495,8 @@ void CPCQueryWrapperToolkit::GetEigenVectors(osg::Vec3d& outMajorPoint, osg::Vec
 
 double CPCQueryWrapperToolkit::CalcArea(const osg::BoundingBox& boundBox, EPlaneType eType)
 {
-	if (boundBox.xMin() > boundBox.xMax() || boundBox.yMin() > boundBox.yMax() || boundBox.zMin() > boundBox.zMax())
+	if (boundBox.xMin() > boundBox.xMax() || boundBox.yMin() > boundBox.yMax() ||
+		boundBox.zMin() > boundBox.zMax())
 		return 0.0;
 
 	double dArea = 0.0;
@@ -292,19 +505,21 @@ double CPCQueryWrapperToolkit::CalcArea(const osg::BoundingBox& boundBox, EPlane
 	case CPCQueryWrapperToolkit::eXYPlane:
 	{
 		dArea = (boundBox.xMax() - boundBox.xMin()) * (boundBox.yMax() - boundBox.yMin());
-	}break;
+	}
+	break;
 	case CPCQueryWrapperToolkit::eXZPlane:
 	{
 		dArea = (boundBox.xMax() - boundBox.xMin()) * (boundBox.zMax() - boundBox.zMin());
-	}break;
+	}
+	break;
 	case CPCQueryWrapperToolkit::eYZPlane:
 	{
 		dArea = (boundBox.yMax() - boundBox.yMin()) * (boundBox.zMax() - boundBox.zMin());
-	}break;
+	}
+	break;
 	default:
 		break;
 	}
 
 	return dArea;
 }
-

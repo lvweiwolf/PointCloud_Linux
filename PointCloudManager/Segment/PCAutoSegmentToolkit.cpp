@@ -5,6 +5,7 @@
 #include <BusinessNode/BnsProjectNode.h>
 
 #include <include/PointCloudSegAPI.h>
+#include <include/ClusterManagerSet.h>
 
 #include <Tool/LibToolkit.h>
 #include <Tool/FileToolkit.h>
@@ -177,14 +178,13 @@ void RemoveCluster(const std::set<unsigned>& clearCluter, LPCTSTR strPrj)
 	pCurTxn->SetNextTxn(pCluterTxn);*/
 }
 
-void CPCAutoSegmentToolkit::Segment(
-	const std::vector<pc::data::CModelNodePtr>& vPointCloudElements,
-	pc::data::SegmentParam segmentParam,
-	std::map<unsigned, osg::BoundingBox>& clusterBoxMap,
-	const std::map<int, int>& mapConvertType /* = std::map<int, int>()*/,
-	ESegmentType eSegmentType /* = eAutoSegment*/,
-	const std::set<unsigned>& vegetationTypes /* = {}*/,
-	const unsigned& nGroundType /* = 0*/)
+void CPCAutoSegmentToolkit::Segment(const pc::data::CModelNodeVector& vPointCloudElements,
+									pc::data::SegmentParam segmentParam,
+									std::map<unsigned, osg::BoundingBox>& clusterBoxMap,
+									const std::map<int, int>& mapConvertType,
+									ESegmentType eSegmentType,
+									const std::set<unsigned>& vegetationTypes,
+									const unsigned& nGroundType)
 {
 	try
 	{
@@ -210,7 +210,7 @@ void CPCAutoSegmentToolkit::Segment(
 
 		// 计算包围框
 		std::vector<osg::BoundingBox> vDataBounds;
-		std::vector<pc::data::CModelNodePtr> vecPointCloudElement;
+		pc::data::CModelNodeVector vecPointCloudElement;
 		ComputeCloudBounds(vPointCloudElements,
 						   segmentParam,
 						   INT_AUTO_CLASSIFY_BOX_MAX_POINTS_SIZE,
@@ -245,8 +245,8 @@ void CPCAutoSegmentToolkit::Segment(
 		// 替换自动分类后的元素
 		/*for (int i = 0; i < vecPointCloudElement.size(); ++i)
 		{
-			CPointCloudCommonTool::LoadNodeWhenOldNodeLoaded(std::vector<pc::data::CModelNodePtr>{vecPointCloudElement[i]}
-			, std::vector<pc::data::CModelNodePtr>{vClonePointCloudElements[i]});
+			CPointCloudCommonTool::LoadNodeWhenOldNodeLoaded(pc::data::CModelNodeVector{vecPointCloudElement[i]}
+			, pc::data::CModelNodeVector{vClonePointCloudElements[i]});
 			d3s::views::primitive::EditElementHandle handle(vClonePointCloudElements[i]);
 			d3s::views::txn::CTxnManager::GetManager()->GetCurrentTxn()->ReplaceElement(handle,
 		vecPointCloudElement[i]);
@@ -257,47 +257,66 @@ void CPCAutoSegmentToolkit::Segment(
 	}
 }
 
-bool CPCAutoSegmentToolkit::TreeIndividual(
-	const std::vector<pc::data::CModelNodePtr>& pcElementList,
-	const osg::BoundingBox& boundingBox,
-	const std::set<unsigned>& vegetationTypes,
-	const unsigned& nGroundType,
-	std::map<unsigned, osg::BoundingBox>& clusterBoxMap)
+bool CPCAutoSegmentToolkit::TreeIndividual(const pc::data::CModelNodeVector& pointCloudElements,
+										   const osg::BoundingBox& boundingBox,
+										   const std::set<unsigned>& vegetationTypes,
+										   const unsigned& nGroundType,
+										   std::map<unsigned, osg::BoundingBox>& clusterBoxMap)
 {
-	// pc::data::SegmentParam segmentParam;
-	// segmentParam._boundingBox = boundingBox;
-	// Segment(pcElementList, segmentParam, std::map<int, int>(), ESegmentType::eTreeIndividual,
-	// clusterBoxMap, vegetationTypes, nGroundType);
+	CBnsProjectNode bnsProject;
 
-	//// 自动分类分块进行，区域重合会导致簇重叠，clusterBoxMap未同步更新簇管理器
-	// LPCTSTR strPrjId = nullptr;
-	// for (const auto& iter : pcElementList)
-	//{
-	//	if (nullptr != iter && iter->GetPrjID() != nullptr)
-	//	{
-	//		strPrjId = iter->GetPrjID();
-	//		break;
-	//	}
-	// }
-	// auto pMgr = CClusterManagerSet::GetInst()->GetClusterManager(strPrjId);
-	// if (nullptr == pMgr)
-	//	return false;
-	// std::vector<int> badIdList;
-	// for (const auto& iter : clusterBoxMap)
-	//{
-	//	if (nullptr == pMgr->FindClusterByID(iter.first))
-	//		badIdList.push_back(iter.first);
+	if (pointCloudElements.size() == 0)
+	{
+		d3s::CLog::Warn(L"CPCAutoSegmentToolkit::TreeIndividual 点云参数为空!");
+		return false;
+	}
 
-	//}
-	// for (const auto& iter : badIdList)
-	//	clusterBoxMap.erase(iter);
+	if (nullptr != pointCloudElements.front())
+	{
+		pc::data::CModelNodePtr pProjectNode =
+			pointCloudElements.front()->GetTypeParent((int)eBnsProjectRoot);
+
+		bnsProject = pProjectNode;
+	}
+
+	if (bnsProject.IsNull())
+		return false;
+
+	pc::data::SegmentParam segmentParam;
+	segmentParam._boundingBox = boundingBox;
+
+	Segment(pointCloudElements,
+			segmentParam,
+			clusterBoxMap,
+			std::map<int, int>(),
+			ESegmentType::eTreeIndividual,
+			vegetationTypes,
+			nGroundType);
+
+	// 自动分类分块进行，区域重合会导致簇重叠，clusterBoxMap未同步更新簇管理器
+	CString strPrjId = bnsProject.GetID();
+
+	auto clusterManager = CClusterManagerSet::GetInst()->GetClusterManager(strPrjId);
+	if (!clusterManager)
+		return false;
+
+	std::vector<int> badIdList;
+	for (const auto& iter : clusterBoxMap)
+	{
+		if (!clusterManager->FindClusterByID(iter.first))
+			badIdList.push_back(iter.first);
+	}
+
+	for (const auto& iter : badIdList)
+		clusterBoxMap.erase(iter);
+
 	return true;
 }
 
-std::vector<pc::data::CModelNodePtr> CPCAutoSegmentToolkit::ClonePointCloudElements(
-	const std::vector<pc::data::CModelNodePtr>& vPointCloudElements)
+pc::data::CModelNodeVector CPCAutoSegmentToolkit::ClonePointCloudElements(
+	const pc::data::CModelNodeVector& vPointCloudElements)
 {
-	std::vector<pc::data::CModelNodePtr> vClonePointCloudElements;
+	pc::data::CModelNodeVector vClonePointCloudElements;
 	// for (auto& pointCloudElement : vPointCloudElements)
 	//{
 	//	d3s::share_ptr<d3s::element::CElement> pCloneElement =
@@ -356,11 +375,11 @@ IPointCloudPtr CPCAutoSegmentToolkit::ConvertPointCloud(
 }
 
 void CPCAutoSegmentToolkit::ComputeCloudBounds(
-	const std::vector<pc::data::CModelNodePtr>& vOldPointCloudElements,
+	const pc::data::CModelNodeVector& vOldPointCloudElements,
 	const pc::data::SegmentParam& segmentParam,
 	size_t nPointSize,
 	std::vector<osg::BoundingBox>& vBoundingBoxs,
-	std::vector<pc::data::CModelNodePtr>& vPointCloudElements)
+	pc::data::CModelNodeVector& vPointCloudElements)
 {
 	osg::BoundingBox boundingBox;
 	pc::data::PointCloudBoundToPointNum boundToPointNum;
@@ -390,11 +409,11 @@ void CPCAutoSegmentToolkit::ComputeCloudBounds(
 }
 
 void CPCAutoSegmentToolkit::ComputeCloudBounds(
-	const std::vector<pc::data::CModelNodePtr>& vOldPointCloudElements,
+	const pc::data::CModelNodeVector& vOldPointCloudElements,
 	const pc::data::SegmentParam& segmentParam,
 	size_t nPointSize,
 	std::vector<osg::BoundingBox>& vBoundingBoxs,
-	std::vector<pc::data::CModelNodePtr>& vPointCloudElements,
+	pc::data::CModelNodeVector& vPointCloudElements,
 	ESegmentType eSegmentType)
 {
 	pc::data::PointCloudBoundToPointNum boundToPointNum;
@@ -424,7 +443,7 @@ void CPCAutoSegmentToolkit::ComputeCloudBounds(
 	if (boundToPointNum.empty())
 	{
 		d3s::CLog::Error("[QueryBoundingBoxList] 获得点云原色边界范围数量: %d.",
-		boundToPointNum.size());
+						 boundToPointNum.size());
 		return;
 	}
 

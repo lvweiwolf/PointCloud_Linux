@@ -4,7 +4,8 @@
 
 #include <cstdio>
 #include <vector>
-#include <thread>
+
+
 std::map<char, bool> GetSegmentShowType()
 {
 	std::map<char, bool> showTypeMap;
@@ -19,14 +20,8 @@ std::map<char, bool> GetSegmentShowType()
 	showTypeMap[pc::data::ROAD_CLASSIFY] = true;
 	showTypeMap[pc::data::INSULATOR_CLASSIFY] = true;
 	showTypeMap[pc::data::JK_GROUND_WIRE_CLASSIFY] = true;
-	return std::move(showTypeMap);
-}
 
-void thread_func(int id) {
-	for (int i = 0; i < 1000; ++i) {
-		d3s::CLog::Error(L"Thread %d: message %d", id, i);
-		// 也可以混合调用其他日志级别
-	}
+	// return std::move(showTypeMap);
 }
 
 int main(int argc, char* argv[])
@@ -56,6 +51,8 @@ int main(int argc, char* argv[])
 
 	if (bnsProject.IsNull())
 		return 0;
+
+	CString prjID = bnsProject.GetID();
 
 	/*2.导入las文件*/
 	auto start = std::chrono::steady_clock::now();

@@ -144,10 +144,10 @@ namespace pc {
 			/**
 			 *  @brief    删除属性
 			 *
-			 *  @param    LPCWSTR lpKey 关键字
+			 *  @param    LPCTSTR lpKey 关键字
 			 *  @return   bool 存在返回true
 			 */
-			virtual bool RemoveData(LPCWSTR lpKey);
+			virtual bool RemoveData(LPCTSTR lpKey);
 
 			/**
 			 *  @brief    删除所有属性
@@ -158,27 +158,27 @@ namespace pc {
 			/**
 			 *  @brief    获取属性
 			 *
-			 *  @param    LPCWSTR lpKey 关键字
+			 *  @param    LPCTSTR lpKey 关键字
 			 *  @param    const CAny& defData 没有找到的默认值
 			 *								 (设置此参数后将默认添加到属性中)
 			 *  @return   const CAny& 返回属性对象,如果没有则为空对象
 			 */
-			virtual const CAny& GetData(LPCWSTR lpKey, const CAny& defData = CAny());
+			virtual const CAny& GetData(LPCTSTR lpKey, const CAny& defData = CAny());
 
 			/**
 			 *  @brief    设置属性
 			 *
-			 *  @param    LPCWSTR lpKey 关键字
+			 *  @param    LPCTSTR lpKey 关键字
 			 *  @param    cosnt CAny& data 数据
 			 *  @param    bool bAttach 是否把data的值直接转移(提高赋值性能)
 			 *  @remark	 如果不存关键字则创建对应属性
 			 */
-			virtual void SetData(LPCWSTR lpKey, const CAny& data, bool bAttach = false);
+			virtual void SetData(LPCTSTR lpKey, const CAny& data, bool bAttach = false);
 
 			/**
 			 *  @brief    设置属性
 			 *
-			 *  @param    LPCWSTR lpKey 关键字
+			 *  @param    LPCTSTR lpKey 关键字
 			 *  @param    cosnt CAny& data 数据
 			 *  @param    bool bAttach 是否把data的值直接转移(提高赋值性能)
 			 *  @remark	 如果不存关键字则创建对应属性
@@ -188,10 +188,10 @@ namespace pc {
 			/**
 			 *  @brief    是否存指定属性
 			 *
-			 *  @param    LPCWSTR lpKey 关键字
+			 *  @param    LPCTSTR lpKey 关键字
 			 *  @return   bool 存在返回true
 			 */
-			virtual bool HasData(LPCWSTR lpKey) const;
+			virtual bool HasData(LPCTSTR lpKey) const;
 
 		public:
 			/**
@@ -299,14 +299,14 @@ namespace pc {
 			 * @param [in] bAttach
 			 * @return
 			 **/
-			void SetDataR(LPCWSTR lpKey, const pc::data::CAny& data, bool bAttach = false);
+			void SetDataR(LPCTSTR lpKey, const pc::data::CAny& data, bool bAttach = false);
 			/**
 			 *  @brief    删除属性
 			 *
-			 *  @param    LPCWSTR lpKey 关键字
+			 *  @param    LPCTSTR lpKey 关键字
 			 *  @return   bool 存在返回true
 			 */
-			virtual bool RemoveDataR(LPCWSTR lpKey);
+			virtual bool RemoveDataR(LPCTSTR lpKey);
 
 			/**
 			 *  @brief    删除所有属性

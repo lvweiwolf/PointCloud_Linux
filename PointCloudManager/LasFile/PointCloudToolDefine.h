@@ -130,12 +130,13 @@ namespace pc {
 						  SVisitorInfo sliceVisitorInfo = SVisitorInfo{},
 						  const std::vector<unsigned>& hideSegmentList = std::vector<unsigned>{})
 				: _visitorInfo(visitorInfo),
-				  _hideSegmentList(hideSegmentList),
 				  _sliceVisitorInfo(sliceVisitorInfo),
+				  _hideSegmentList(hideSegmentList),
 				  _pBoundingBox(new osg::BoundingBox())
 			{
 				Init();
 			}
+
 			void Init()
 			{
 				_visitorType = ePolygon;
@@ -143,12 +144,14 @@ namespace pc {
 				_pAdditionalParam = nullptr;
 				_bAllTraversal = false;
 			}
+			
 			void ExpandBoundingBox(const osg::Vec3d& point)
 			{
 				if (nullptr == _pBoundingBox)
 					return;
 				_pBoundingBox->expandBy(point);
 			}
+
 			osg::BoundingBox GetBoundingBox(void)
 			{
 				if (nullptr == _pBoundingBox)
@@ -163,6 +166,7 @@ namespace pc {
 			PropVisitorCallback _pPropVisitorCallback;				  // 回调函数指针
 			d3s::share_ptr<d3s::ReferenceCountObj> _pAdditionalParam; // 回调附加参数
 			bool _bAllTraversal;									  // 是否全遍历
+
 		private:
 			osg::BoundingBox* _pBoundingBox; // 遍历操作点的包围盒
 		};

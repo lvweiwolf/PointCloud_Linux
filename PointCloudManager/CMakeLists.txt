@@ -4,12 +4,14 @@ aux_source_directory(BusinessNode BUSSINESS_SRC)
 aux_source_directory(LasFile LAS_SRC)
 aux_source_directory(ProjectManager PROJECT_SRC)
 aux_source_directory(Segment SEGMENT_SRC)
+aux_source_directory(Cluster CLUSTER_SRC)
 
 list(APPEND SOURCES ${INC_SRC} 
 					${BUSSINESS_SRC} 
                     ${LAS_SRC} 
                     ${PROJECT_SRC} 
-					${SEGMENT_SRC})
+					${SEGMENT_SRC} 
+					${CLUSTER_SRC})
 
 add_library(PointCloudManager SHARED 
 	${SOURCES}

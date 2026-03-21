@@ -28,9 +28,7 @@
 #include "spdlog/sinks/stdout_color_sinks.h"
 
 using namespace d3s;
-//提前定义CLog
-template<>
-CLog* Singleton<CLog>::_pInstance{ new CLog() };
+
 
 void CLog::LogPrint()
 {

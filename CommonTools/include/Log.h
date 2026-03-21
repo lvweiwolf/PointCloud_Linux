@@ -2,38 +2,10 @@
 #define D3S_LOG_H_
 
 #include <include/CommonToolsExport.h>
+#include <include/Singleton.h>
 #include <memory>
 #include <string>
-//单例模板
-template <typename subclass>
-class Singleton
-{
-public:
-	Singleton() {}
-	virtual ~Singleton() {}
-	static subclass* GetInst()
-	{
-		//线程不安全版本 如要使用该单例定义,需要考虑线程安全 
-		if (!_pInstance) {
-			_pInstance = new subclass();
-		}
-		return _pInstance;
-	}
-	static void FreeInst()
-	{
-		if (_pInstance != nullptr)
-		{
-			delete _pInstance;
-			_pInstance = nullptr;
-		}
-	}
-private:
 
-	static subclass* _pInstance;
-
-};
-template<typename subclass>
-inline subclass* Singleton<subclass>::_pInstance = nullptr;
 // 前向声明 spdlog 的命名空间（实际包含头文件时再引入）
 namespace spdlog
 {

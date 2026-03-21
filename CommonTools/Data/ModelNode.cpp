@@ -47,11 +47,11 @@ namespace pc {
 		}
 
 
-		bool CModelNode::RemoveData(LPCWSTR lpKey) { return RemoveDataR(lpKey); }
+		bool CModelNode::RemoveData(LPCTSTR lpKey) { return RemoveDataR(lpKey); }
 
 		void CModelNode::RemoveAllData() { RemoveAllDataR(); }
 
-		const pc::data::CAny& CModelNode::GetData(LPCWSTR lpKey, const pc::data::CAny& defData)
+		const pc::data::CAny& CModelNode::GetData(LPCTSTR lpKey, const pc::data::CAny& defData)
 		{
 			static pc::data::CAny stAny; // 用于返回临时引用
 			if (nullptr == lpKey && defData.IsEmpty())
@@ -80,7 +80,7 @@ namespace pc {
 			return ret.first->second;
 		}
 
-		void CModelNode::SetData(LPCWSTR lpKey, const pc::data::CAny& data, bool bAttach)
+		void CModelNode::SetData(LPCTSTR lpKey, const pc::data::CAny& data, bool bAttach)
 		{
 			SetDataR(lpKey, data, bAttach);
 		}
@@ -94,7 +94,7 @@ namespace pc {
 			}
 		}
 
-		bool CModelNode::HasData(LPCWSTR lpKey) const
+		bool CModelNode::HasData(LPCTSTR lpKey) const
 		{
 			return (nullptr != lpKey) && (nullptr != _pDataMap) &&
 				   (_pDataMap->find(lpKey) != _pDataMap->end());
@@ -295,7 +295,7 @@ namespace pc {
 			return (*_pDataMap);
 		}
 
-		void CModelNode::SetDataR(LPCWSTR lpKey,
+		void CModelNode::SetDataR(LPCTSTR lpKey,
 								  const pc::data::CAny& data,
 								  bool bAttach /*= false*/)
 		{
@@ -316,7 +316,7 @@ namespace pc {
 				oldData = data;
 		}
 
-		bool CModelNode::RemoveDataR(LPCWSTR lpKey)
+		bool CModelNode::RemoveDataR(LPCTSTR lpKey)
 		{
 			if (nullptr == lpKey || nullptr == _pDataMap)
 				return false;

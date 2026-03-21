@@ -9,7 +9,7 @@
             "type": "lldb",
             "request": "launch",
             "program": "${workspaceFolder}/out/build/linux-debug/bin/AppStarter",
-            "args": [],
+            "args": ["/home/lvwei/cloud/temp/test.las", "/home/lvwei/cloud/temp/projects/"],
             "cwd": "${workspaceFolder}",
             "stopOnEntry": false,
             "env":{

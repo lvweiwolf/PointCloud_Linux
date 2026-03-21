@@ -22,6 +22,8 @@ namespace pc {
 
 		CModelNode* BnsWrapper::operator->() { return _pNode.get(); }
 
+		LPCTSTR BnsWrapper::GetID() const { return _pNode->GetId(); }
+
 		int BnsWrapper::GetTag() const { return _pNode->getNodeTypeId(); }
 
 		void BnsWrapper::SetTag(int nTag)

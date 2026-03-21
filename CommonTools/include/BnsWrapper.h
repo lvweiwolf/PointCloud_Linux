@@ -55,13 +55,14 @@ namespace pc {
 			bool HasNode(CModelNodePtr pNode);
 
 		public:
+			LPCTSTR GetID() const;
 			int GetTag() const;
 			void SetTag(int nTag);
-			const CAny& GetData(LPCWSTR lpKey, const CAny& defData = CAny());
-			void SetData(LPCWSTR lpKey, const CAny& data);
-			bool RemoveData(LPCWSTR lpKey);
-			bool HasData(LPCWSTR lpKey) const;
-			void SetData(const CString& strTag, LPCWSTR lpKey, const CAny& data);
+			const CAny& GetData(LPCTSTR lpKey, const CAny& defData = CAny());
+			void SetData(LPCTSTR lpKey, const CAny& data);
+			bool RemoveData(LPCTSTR lpKey);
+			bool HasData(LPCTSTR lpKey) const;
+			void SetData(const CString& strTag, LPCTSTR lpKey, const CAny& data);
 			CModelNodePtr GetParentByTag(int nTag);
 
 		public:

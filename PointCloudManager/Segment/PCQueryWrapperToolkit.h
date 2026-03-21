@@ -38,14 +38,14 @@ public:
 
 	/**
 	 *  函数介绍    	查询元素包围盒列表（static）
-	 *  输入参数    	vPointCloudElements	即将被查询包围盒的点云元素
+	 *  输入参数    	pcElements	即将被查询包围盒的点云元素
 	 *  输入参数    	vpwMatrix	vpw变换矩阵
 	 *  输入参数    	vSelectPoints	框选点信息
 	 *  输入参数    	boundToPointNum	包围盒信息列表
 	 *  输出参数     vecResult 在框选范围中的点云元素
 	 *  返回值   	void
 	 */
-	static void QueryBoundingBoxList(const pc::data::CModelNodeVector& vPointCloudElements,
+	static void QueryBoundingBoxList(const pc::data::CModelNodeVector& pcElements,
 									 const osg::Matrix& vpwMatrix,
 									 const std::vector<osg::Vec3d>& vSelectPoints,
 									 pc::data::PointCloudBoundToPointNum& boundToPointNum,
@@ -53,18 +53,67 @@ public:
 
 	/**
 	 * 查询元素包围盒列表
-	 * @param [in] vPointCloudElements	即将被查询包围盒的点云元素
+	 * @param [in] pcElements	即将被查询包围盒的点云元素
 	 *
 	 * @param [in] boundingBox			查询包围盒大小
 	 * @param [in] boundToPointNum		包围盒信息列表
 	 *
-	 * @param [in] vPointCloudElements	在包围盒中的点云元素
+	 * @param [in] pcElements	在包围盒中的点云元素
 	 * @return
 	 */
-	static void QueryBoundingBoxList(const pc::data::CModelNodeVector& vPointCloudElements,
+	static void QueryBoundingBoxList(const pc::data::CModelNodeVector& pcElements,
 									 const osg::BoundingBox& boundingBox,
 									 pc::data::PointCloudBoundToPointNum& boundToPointNum,
 									 pc::data::CModelNodeVector& vecResult);
+
+	/**
+	 * 通过包围盒查询簇
+	 * @param [in] pcElementList		待查询的点云
+	 * @param [in] boundingBox		范围包围盒
+	 * @param [in] clusterBoxMap		簇id对应的点集<簇id，包围盒>
+	 * @param [in] intTypeFind		在指定分类下查找（为空则查询全部）
+	 * @return
+	 */
+	static bool QueryClusterByBox(const pc::data::CModelNodeVector& pcElements,
+								  const osg::BoundingBox& boundingBox,
+								  std::map<unsigned, osg::BoundingBox>& clusterBoxMap,
+								  const std::set<unsigned>& intTypeFind);
+
+	/**
+	 * 通过包围盒查询簇
+	 * @param [in] pcWrapperList		待查询的点云
+	 * @param [in] polygnPnts		多边形范围（空间二维坐标，忽略Z值）
+	 * @param [out] clusterBoxMap	簇id对应的点集<簇id，包围盒>
+	 * @param [in] intTypeFind		在指定分类下查找（为空则查询全部）QueryClusterByPolygn
+	 * @return
+	 */
+	static bool QueryClusterByPolygn(const pc::data::CModelNodeVector& pcLements,
+									 const std::vector<osg::Vec3d>& polygnPnts,
+									 std::map<unsigned, osg::BoundingBox>& clusterBoxMap,
+									 const std::set<unsigned>& intTypeFind);
+
+	/**
+	 * 通过多边形查询范围内的簇，并按包含关系输出
+	 * @param [in] strPrjId		工程ID
+	 * @param [out] std::vector<int> clusterIdsByEdit;		//需要拆分的
+	 * @param [out] std::vector<int> clusterIdsByModify;	//只需要修改的
+	 * @return
+	 */
+	static bool QueryClusterAndTypeByPolygn(LPCTSTR strPrjId,
+											const std::vector<osg::Vec3d>& polygnPnts,
+											std::vector<int>& clusterIdsByEdit,
+											std::vector<int>& clusterIdsByModify);
+
+	/**
+	 * 通过圆查询范围内是否存在簇
+	 * @param [in] pcWrapperList		待查询的点云
+	 * @param [in] center			圆心
+	 * @param [in] dR				半径
+	 * @return
+	 */
+	static bool QueryHasClusterInyCircular(const pc::data::CModelNodeVector& pcElements,
+										   osg::Vec3d center,
+										   double dR);
 
 	/*
 	 * 函数介绍：获取Eigen点（static）

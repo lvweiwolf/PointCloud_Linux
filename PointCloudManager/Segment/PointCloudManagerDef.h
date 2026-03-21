@@ -1,6 +1,7 @@
 ﻿#ifndef POINTCLOUDMANAGERDEF_H_
 #define POINTCLOUDMANAGERDEF_H_
 
+#include <include/Log.h>
 #include <LasFile/OsgDefines.h>
 
 #define MASK(x) (1 << (x))
@@ -199,8 +200,8 @@ namespace pc {
 						 const std::map<char, bool>& showTypeMap)
 				: _strVolLevel(strVolLevel),
 				  _strTopographicFeatures(strTopographicFeatures),
-				  _vpwMatrix(matrix),
 				  _vecTowerPos(vecTowerPos),
+				  _vpwMatrix(matrix),
 				  _vecSelectPoints(vecSelectPoints),
 				  _showTypeMap(showTypeMap),
 				  _epsg(-1),
@@ -260,7 +261,7 @@ namespace pc {
 			tagPointIndex() : _fDistance(0), _nType(0) {};
 
 			tagPointIndex(const osg::Vec3& pnt, float fDistance, uint32_t nType)
-				: _fDistance(fDistance), _nType(nType), _pnt(pnt) {};
+				: _pnt(pnt), _fDistance(fDistance), _nType(nType) {};
 
 			osg::Vec3 _pnt;	  // 点
 			float _fDistance; // 与目标的距离（平方距离）
@@ -320,8 +321,8 @@ namespace pc {
 			tagTravelInfo()
 				: fRadius(0.0),
 				  bOnlyXYRadius(false),
-				  bOnlyInLine(false),
-				  eMode(ETravelMode::eFastWideTravel)
+				  eMode(ETravelMode::eFastWideTravel),
+				  bOnlyInLine(false)
 			{
 			}
 			osg::Vec3 beginPnt;
@@ -355,12 +356,13 @@ namespace pc {
 			SPolygonParam() : _bAllTraversal(false) {}
 			SPolygonParam(const pc::data::SPolygonParam& param)
 				: _matVPW(param._matVPW),
-				  _polygonPoints(param._polygonPoints),
 				  _sliceMatVPW(param._sliceMatVPW),
+				  _polygonPoints(param._polygonPoints),
 				  _slicePolygonPoints(param._slicePolygonPoints),
 				  _bAllTraversal(param._bAllTraversal)
 			{
 			}
+			
 			osg::Matrix _matVPW;						 // 操作视口vpw矩阵
 			osg::Matrix _sliceMatVPW;					 // 剖切视口vpw矩阵
 			std::vector<osg::Vec3d> _polygonPoints;		 // 操作视口多边形点集
@@ -478,8 +480,9 @@ namespace pc {
 
 			std::map<int, osg::BoundingBox> boundPerCluster; // 类簇的包围盒
 			std::map<int, std::vector<std::vector<osg::Vec3d>>>
-				polygonPerCluster;					   // 类簇的多边形轮廓
-			std::map<int, int> _mapClusterOldToNewIds; // 老簇与新簇的id映射关系,key为新簇value为旧簇
+				polygonPerCluster; // 类簇的多边形轮廓
+			std::map<int, int>
+				_mapClusterOldToNewIds; // 老簇与新簇的id映射关系,key为新簇value为旧簇
 		};
 
 
@@ -583,10 +586,10 @@ namespace pc {
 	} while (0);
 
 
-#define PC_ERROR(...) pc::CLog::Log(d3s::CLog::err, __VA_ARGS__)
-#define PC_WARN(...) pc::CLog::Log(d3s::CLog::warn, __VA_ARGS__)
-#define PC_INFO(...) pc::CLog::Log(d3s::CLog::info, __VA_ARGS__)
-#define PC_DEBUG(...) pc::CLog::Log(d3s::CLog::debug, __VA_ARGS__)
+#define PC_ERROR(...) d3s::CLog::Log(d3s::CLog::err, __VA_ARGS__)
+#define PC_WARN(...) d3s::CLog::Log(d3s::CLog::warn, __VA_ARGS__)
+#define PC_INFO(...) d3s::CLog::Log(d3s::CLog::info, __VA_ARGS__)
+#define PC_DEBUG(...) d3s::CLog::Log(d3s::CLog::debug, __VA_ARGS__)
 
 
 #endif // POINTCLOUDMANAGERDEF_H_
