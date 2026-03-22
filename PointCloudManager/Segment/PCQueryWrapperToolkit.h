@@ -67,6 +67,44 @@ public:
 									 pc::data::CModelNodeVector& vecResult);
 
 	/**
+	 * 通过簇ID查询点云
+	 * @param [in] pcElementList	待查询的点云
+	 * @param [in] nClusterId	簇ID
+	 * @param [out] pointList	点集
+	 * @return
+	 */
+	static bool QueryPointsByClusterId(const pc::data::CModelNodeVector& pcElements,
+									   const unsigned nClusterId,
+									   std::vector<osg::Vec3d>& pointList);
+
+	/**
+	 * 通过簇ID查询簇包围盒
+	 * @param [in] pcElements	待查询的点云
+	 * @param [in] clusterIds	簇ID
+	 * @param [in] clusterBox	簇包围盒<簇ID，簇包围盒>
+	 * @return
+	 */
+	static bool QueryBoxByClusterId(const pc::data::CModelNodeVector& pcElements,
+									const std::vector<int>& clusterIds,
+									std::map<int, osg::BoundingBox>& clusterBox);
+
+
+	/**
+	 * 通过范围查询簇
+	 * @param [in] pcElements		待查询的点云
+	 * @param [in] vpwMatrix			vpw矩阵
+	 * @param [in] polygonPointList	多边形
+	 * @param [in] clusterPointMap	簇id对应的点集<簇id，点集>
+	 * @param [in] intTypeFind		在指定分类下查找（为空则查询全部）
+	 * @return
+	 */
+	static bool QueryClusterByPolygon(const pc::data::CModelNodeVector& pcElements,
+									  const osg::Matrix& vpwMatrix,
+									  const std::vector<osg::Vec3d>& polygonPointList,
+									  std::map<unsigned, std::vector<osg::Vec3d>>& clusterPointMap,
+									  const std::set<unsigned>& intTypeFind);
+
+	/**
 	 * 通过包围盒查询簇
 	 * @param [in] pcElementList		待查询的点云
 	 * @param [in] boundingBox		范围包围盒

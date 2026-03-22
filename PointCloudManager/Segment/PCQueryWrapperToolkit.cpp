@@ -51,6 +51,18 @@ namespace {
 		tbb::mutex _mutex;	// 互斥锁
 	};
 
+	struct SQueryClusterData : public d3s::ReferenceCountObj
+	{
+		SQueryClusterData(std::vector<osg::Vec3d>& pointList, int nClusterId)
+			: _pointList(pointList), _nClusterId(nClusterId)
+		{
+		}
+
+		std::vector<osg::Vec3d>& _pointList;
+		int _nClusterId;
+		tbb::mutex _mutex;
+	};
+
 	bool QueryClusterBox(pc::data::SVisitorCallbackParam& callbackParam)
 	{
 		if (nullptr == callbackParam._pTexCoordArray)
@@ -298,6 +310,135 @@ void CPCQueryWrapperToolkit::QueryBoundingBoxList(
 	}
 }
 
+bool CPCQueryWrapperToolkit::QueryPointsByClusterId(const pc::data::CModelNodeVector& pcElements,
+													const unsigned nClusterId,
+													std::vector<osg::Vec3d>& pointList)
+{
+	if (pcElements.empty())
+		return false;
+
+	CBnsProjectNode bnsProject;
+
+	if (nullptr != pcElements.front())
+	{
+		pc::data::CModelNodePtr pProjectNode =
+			pcElements.front()->GetTypeParent((int)eBnsProjectRoot);
+
+		bnsProject = pProjectNode;
+	}
+
+	if (bnsProject.IsNull())
+		return false;
+
+	d3s::share_ptr<CClusterManager> clusterManager =
+		CClusterManagerSet::GetInst()->GetClusterManager(bnsProject.GetID());
+
+	if (!clusterManager.valid())
+		return false;
+
+	auto cluster = clusterManager->FindClusterByID(nClusterId);
+	if (!cluster.valid())
+		return false;
+
+	// 簇包围盒
+	osg::BoundingBox clusterBox = cluster->GetBoundingBox();
+
+	/*
+		struct STempData
+		{
+			pc::data::tagPagedLodFile _pagelodFiles;
+			osg::ref_ptr<osg::Node> _pNode;
+		};
+
+		std::vector<STempData> filePaths;
+	*/
+	std::vector<pc::data::tagPagedLodFile> filePaths;
+
+	for (const auto& pointCloudElement : pcElements)
+	{
+		pc::data::CModelNodeVector pageLods;
+		CPointCloudBoxQuery::GetLevelPagedLodList(pointCloudElement,
+												  CPointCloudBoxQuery::nAllLevel,
+												  pageLods);
+		for (auto pageLODNode : pageLods)
+		{
+			CBnsPointCloudNode bnsPageLOD = pageLODNode;
+
+			clusterBox.zMax() = clusterBox.zMin() = bnsPageLOD.GetRealBoundingBox().zMax();
+			if (!pageLODNode.valid() || !clusterBox.intersects(bnsPageLOD.GetRealBoundingBox()))
+				continue;
+
+			/*
+				STempData data;
+				int nData = bnsPageLOD.getNumPriorityScales();
+				int nChildNum = pageLODNode->getNumChildren();
+				if (nData < 1 || nChildNum != nData)
+					data._pagelodFiles = PointCloudTool::GetPagedLodModelPath(pageLODNode);
+				else
+					data._pNode = pageLODNode->getChild(nData - 1);
+
+				filePaths.push_back(data);
+			*/
+			filePaths.push_back(GetPagedLodModelPath(pageLODNode));
+		}
+	}
+
+	pc::data::SVisitorInfos visitorInfos;
+	visitorInfos._pAdditionalParam = new SQueryClusterData(pointList, nClusterId);
+	visitorInfos._visitorInfo._boundingBox = clusterBox;
+	visitorInfos._visitorType = pc::data::SVisitorInfos::eBoundingBoxXY;
+	visitorInfos._pPropVisitorCallback = [](pc::data::SVisitorCallbackParam& callbackParam) {
+		if (!callbackParam._pTexCoordArray.valid())
+			return false;
+
+		int nClusterID = 0;
+
+		if (!CPointCloudPropertyTool::GetClusterProperty(callbackParam._pTexCoordArray,
+														 callbackParam._nIndex,
+														 nClusterID))
+		{
+			return false;
+		}
+
+		auto pQueryClusterData =
+			static_cast<SQueryClusterData*>(callbackParam._pAdditionalParam.get());
+
+		if (nullptr == pQueryClusterData)
+			return false;
+
+		if (pQueryClusterData->_nClusterId == nClusterID)
+		{
+			tbb::mutex::scoped_lock lock(pQueryClusterData->_mutex);
+			pQueryClusterData->_pointList.push_back(callbackParam._point);
+		}
+
+		return true;
+	};
+
+	tbb::parallel_for(
+		tbb::blocked_range<size_t>(0, filePaths.size()),
+		[&](const tbb::blocked_range<size_t>& r) {
+			for (size_t i = r.begin(); i != r.end(); ++i)
+			{
+				const auto& data = filePaths.at(i);
+				/*
+					if (nullptr != data._pNode)
+						return CPcPropVisitorCommand::Excute(data._pNode,
+				   visitorInfos);
+				*/
+
+				std::string sPointInfoFileName =
+					CStringToolkit::CStringToUTF8(data.strPointInfoFile);
+				std::string sPointTexFileName = CStringToolkit::CStringToUTF8(data.strPointTexFile);
+
+				auto node = CPointCloudToolkit::ReadNode(sPointInfoFileName, sPointTexFileName);
+				if (!node.valid())
+					return;
+
+				CPcPropVisitorCommand::Excute(node, visitorInfos);
+			}
+		});
+}
 
 
 bool CPCQueryWrapperToolkit::QueryClusterByBox(const pc::data::CModelNodeVector& pcElements,
