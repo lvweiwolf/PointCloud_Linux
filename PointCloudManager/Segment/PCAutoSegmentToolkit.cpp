@@ -159,23 +159,18 @@ void CPCAutoSegmentToolkit::SegmentProgress(CAutoSegmentFileLoadSaveThread* pThr
 
 void RemoveCluster(const std::set<unsigned>& clearCluter, LPCTSTR strPrj)
 {
-	/*auto pCluterMgr = CClusterManagerSet::GetInst()->GetClusterManager(strPrj);
-	if (nullptr == pCluterMgr)
-		return;
-	d3s::views::txn::ITxn* pCurTxn = d3s::views::txn::CTxnManager::GetManager()->GetCurrentTxn();
-	if (nullptr == pCurTxn)
+	auto clusterManager = CClusterManagerSet::GetInst()->GetClusterManager(strPrj);
+	if (!clusterManager.valid())
 		return;
 
-	auto pCluterTxn = new CPcClusterEditTxn(CPcClusterEditTxn::EEditType::eDel);
 	for (const auto& iter : clearCluter)
 	{
-		d3s::share_ptr<CClusterItem> pCluter = pCluterMgr->FindClusterByID(iter);
-		if (nullptr == pCluter)
+		auto cluster = clusterManager->FindClusterByID(iter);
+		if (!cluster.valid())
 			continue;
-		pCluterMgr->RemoveClusterItem(pCluter);
-		pCluterTxn->SetClusterData(strPrj, pCluter);
+
+		clusterManager->RemoveClusterItem(cluster);
 	}
-	pCurTxn->SetNextTxn(pCluterTxn);*/
 }
 
 void CPCAutoSegmentToolkit::Segment(const pc::data::CModelNodeVector& vPointCloudElements,
@@ -193,18 +188,21 @@ void CPCAutoSegmentToolkit::Segment(const pc::data::CModelNodeVector& vPointClou
 			d3s::CLog::Warn(L"CPCAutoSegmentToolkit::Segment 点云参数为空!");
 			return;
 		}
+		
+		CBnsProjectNode bnsProject;
 		if (nullptr != vPointCloudElements.front())
 		{
-			pc::data::CModelNodePtr pProjectNode =
+			pc::data::CModelNodePtr rootNode =
 				vPointCloudElements.front()->GetTypeParent((int)eBnsProjectRoot);
-			CBnsProjectNode bnsProject = pProjectNode;
-			if (bnsProject.IsNull())
-				return;
-
-
-			segmentParam._epsg = bnsProject.GetEpsg();
-			segmentParam._offset_xyz = bnsProject.getBasePos();
+			 bnsProject = rootNode;
 		}
+
+		if (bnsProject.IsNull())
+			return;
+
+		segmentParam._epsg = bnsProject.GetEpsg();
+		segmentParam._offset_xyz = bnsProject.getBasePos();
+
 
 		d3s::CTimeLog allTimeRecord(L"自动分类耗时：");
 
@@ -251,6 +249,9 @@ void CPCAutoSegmentToolkit::Segment(const pc::data::CModelNodeVector& vPointClou
 			d3s::views::txn::CTxnManager::GetManager()->GetCurrentTxn()->ReplaceElement(handle,
 		vecPointCloudElement[i]);
 		}*/
+
+		// 删除簇对象
+		RemoveCluster(clearCluter, bnsProject.GetID());
 	}
 	catch (...)
 	{
@@ -625,7 +626,7 @@ void CPCAutoSegmentToolkit::MergeBoundingBoxs(pc::data::PointCloudBoundToPointNu
 				}
 			}
 
-			if (nPoints + nTilePointSize > nBase || dArea > C_AUTO_CLASSIFY_BOX_PROJECTION_AREA_MAX)
+			if (nPoints + nTilePointSize > (int)nBase || dArea > C_AUTO_CLASSIFY_BOX_PROJECTION_AREA_MAX)
 			{
 				nPoints = 0;
 				vBoundingBoxs.push_back(dataBoundNoRepeate);

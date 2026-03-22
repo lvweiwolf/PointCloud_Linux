@@ -8,6 +8,7 @@
 
 #include <include/ClassificationDef.h>
 
+
 #include <Tool/FileToolkit.h>
 
 // #include "PointCloudTool.h"
@@ -16,6 +17,7 @@
 // #include "ClusterManager.h"
 // #include "PointCloudSegmentation/include/ClassificationDef.h"
 // #include <PCQueryWrapperToolkit.h>
+//
 //  植被类型索引
 const int INT__VEGETATION_TYPE_INDEX = 2;
 // 高植被类型索引
@@ -26,12 +28,11 @@ static const pc::data::PointCloudBoundBox2D dummyBox;
 
 CPointReadWriterVisitor::CPointReadWriterVisitor(CPointReadWriter* pWriter, bool bReadWrite)
 	: osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN),
+	  _pWriter(pWriter),
 	  _bReadWrite(bReadWrite),
-	  _bPolygon(false),
-	  _pWriter(pWriter)
+	  _bPolygon(false)
 {
-	//_pClusterManager =
-	// CClusterManagerSet::GetInst()->GetClusterManager(_pWriter->_param._strPrjId);
+	_pClusterManager = CClusterManagerSet::GetInst()->GetClusterManager(_pWriter->_param._strPrjId);
 }
 
 CPointReadWriterVisitor::~CPointReadWriterVisitor() {}
@@ -126,8 +127,8 @@ void CPointReadWriterVisitor::WriteSetSegment(const osg::Vec3& screenPoint,
 														false) &&
 			nClusterID > 0)
 		{
-			// toolkit::CCriticalSectionSync cs(_pWriter->_param._pClearCluster->_CSC);
-			//_pWriter->_param._pClearCluster->_clearCluster.insert(nClusterID);
+			tbb::mutex::scoped_lock lock(_pWriter->_param._pClearCluster->_mutex);
+			_pWriter->_param._pClearCluster->_clearCluster.insert(nClusterID);
 		}
 	}
 }
@@ -262,46 +263,52 @@ void CPointReadWriterVisitor::CreateCluster(osg::ref_ptr<osg::Vec2Array> pTexCoo
 											unsigned treeId,
 											const osg::Vec3& point)
 {
-	//// 获取Page节点
-	// CPointCloudpagedLod* pPage = _pWriter->_param._pagedLod;
-	// if (nullptr == pPage || nullptr == _pClusterManager)
-	//	return;
+	// 获取Page节点
+	pc::data::CModelNodePtr pPage = _pWriter->_param._pLodNode;
+	if (!pPage.valid() || !_pClusterManager.valid())
+		return;
 
-	//// 移除点所属旧簇
-	// int nClusterID = -1;
-	// CPointCloudPropertyTool::GetClusterProperty(pTexCoordArray, nVertexIndex, nClusterID);
+	// 移除点所属旧簇
+	int nClusterID = -1;
+	CPointCloudPropertyTool::GetClusterProperty(pTexCoordArray, nVertexIndex, nClusterID);
 
-	// d3s::share_ptr<CClusterItem> pOldClusterItem = _pClusterManager->FindClusterByID(nClusterID);
-	// d3s::share_ptr<CClusterItem> pClusterItem = nullptr;
-	// if (_pWriter->_param._pTreeClusterMap->_treeClusterMap.end() !=
-	// _pWriter->_param._pTreeClusterMap->_treeClusterMap.find(treeId))
-	//{
-	//	pClusterItem = _pWriter->_param._pTreeClusterMap->_treeClusterMap[treeId];
-	//	CPointCloudPropertyTool::SetClusterProperty(pTexCoordArray, nVertexIndex,
-	// pClusterItem->GetId());
-	// }
+	d3s::share_ptr<CClusterItem> pOldClusterItem = _pClusterManager->FindClusterByID(nClusterID);
+	d3s::share_ptr<CClusterItem> pClusterItem = nullptr;
 
-	//{
-	//	toolkit::CCriticalSectionSync cs(_pWriter->_param._pClusterBoxMap->_CSC);
-	//	if (nullptr != pOldClusterItem)
-	//	{
-	//		pOldClusterItem->RemovePagedLodID(pPage->GetIDKey());
-	//		if (pOldClusterItem->GetPagedLodID().empty())
-	//			_pClusterManager->RemoveClusterItem(pOldClusterItem);
-	//	}
-	//	// 添加簇对应的Page id
-	//	if (nullptr == pClusterItem)
-	//	{
-	//		uint32_t nType = 0;
-	//		CPointCloudPropertyTool::GetSegmentProperty(pTexCoordArray, nVertexIndex, nType);
-	//		pClusterItem = _pClusterManager->CreateCluster(nType, true);
-	//		_pWriter->_param._pTreeClusterMap->_treeClusterMap[treeId] = pClusterItem;
-	//		CPointCloudPropertyTool::SetClusterProperty(pTexCoordArray, nVertexIndex,
-	// pClusterItem->GetId());
-	//	}
-	//	pClusterItem->AddPagedLodID(pPage->GetIDKey());
-	//	_pWriter->_param._pClusterBoxMap->_clusterBoxMap[pClusterItem->GetId()].expandBy(point);
-	//}
+	if (_pWriter->_param._pTreeClusterMap->_treeClusterMap.end() !=
+		_pWriter->_param._pTreeClusterMap->_treeClusterMap.find(treeId))
+	{
+		pClusterItem = _pWriter->_param._pTreeClusterMap->_treeClusterMap[treeId];
+		CPointCloudPropertyTool::SetClusterProperty(pTexCoordArray,
+													nVertexIndex,
+													pClusterItem->GetId());
+	}
+
+	{
+		tbb::mutex::scoped_lock locl(_pWriter->_param._pClusterBoxMap->_mutex);
+
+		if (nullptr != pOldClusterItem)
+		{
+			pOldClusterItem->RemovePagedLodID(pPage->GetId());
+			if (pOldClusterItem->GetPagedLodID().empty())
+				_pClusterManager->RemoveClusterItem(pOldClusterItem);
+		}
+
+		// 添加簇对应的Page id
+		if (nullptr == pClusterItem)
+		{
+			uint32_t nType = 0;
+			CPointCloudPropertyTool::GetSegmentProperty(pTexCoordArray, nVertexIndex, nType);
+			pClusterItem = _pClusterManager->CreateCluster(nType, true);
+			_pWriter->_param._pTreeClusterMap->_treeClusterMap[treeId] = pClusterItem;
+			CPointCloudPropertyTool::SetClusterProperty(pTexCoordArray,
+														nVertexIndex,
+														pClusterItem->GetId());
+		}
+
+		pClusterItem->AddPagedLodID(pPage->GetId());
+		_pWriter->_param._pClusterBoxMap->_clusterBoxMap[pClusterItem->GetId()].expandBy(point);
+	}
 }
 
 void CPointReadWriterVisitor::SetPolygonParam()
@@ -313,13 +320,13 @@ void CPointReadWriterVisitor::SetPolygonParam()
 
 
 CPointReadWriter::CPointReadWriter(const SPointReadWriterParam& param)
-	: _nEndIndex(param._nBeginIndex), _bBound(false), _boundBox(dummyBox), _param(param)
+	: _boundBox(dummyBox), _bBound(false), _nEndIndex(param._nBeginIndex), _param(param)
 {
 }
 
 CPointReadWriter::CPointReadWriter(const SPointReadWriterParam& param,
 								   const pc::data::PointCloudBoundBox2D& boundBox)
-	: _nEndIndex(param._nBeginIndex), _bBound(true), _boundBox(boundBox), _param(param)
+	: _boundBox(boundBox), _bBound(true), _nEndIndex(param._nBeginIndex), _param(param)
 {
 }
 
@@ -327,6 +334,7 @@ void CPointReadWriter::Read()
 {
 	if (nullptr == _param._pLodNode)
 		return;
+
 	pc::data::tagPagedLodFile strModelPath =
 		CPCQueryWrapperToolkit::GetPagedLodModelPath(_param._pLodNode);
 	std::string sPointInfoFileName = CStringToolkit::CStringToUTF8(strModelPath.strPointInfoFile);

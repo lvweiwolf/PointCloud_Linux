@@ -313,20 +313,20 @@ void CPointCloudBoxQuery::MtSetPointsCloudToPoints(SMtSetParam& param)
 	// 过滤筛选线程
 	CFilterPointThreadVec threadList;
 	size_t nNodeCnt = param.validAllInNodeList.size();
-	// pc::share_ptr<SClusterBoxMap> pClusterBoxMap = new SClusterBoxMap(param.clusterBoxMap);
-	// pc::share_ptr<STreeClusterMap> pTreeClusterMap = new STreeClusterMap;
-	// pc::share_ptr<SClearCluster> pClearCluster = new SClearCluster(param.clearCluster);
+	pc::share_ptr<SClusterBoxMap> pClusterBoxMap = new SClusterBoxMap(param.clusterBoxMap);
+	pc::share_ptr<STreeClusterMap> pTreeClusterMap = new STreeClusterMap;
+	pc::share_ptr<SClearCluster> pClearCluster = new SClearCluster(param.clearCluster);
 	SPointReadWriterParam readWriterParam;
 	readWriterParam._pPointCloud = param.pPointCloud;
 	readWriterParam._mapConvertType = param.mapConvertType;
 	readWriterParam._vecSegShowTypep = param.segShowTypeMap;
 	readWriterParam._eSegment = param.eSegment;
-	// readWriterParam._pClusterBoxMap = pClusterBoxMap;
+	readWriterParam._pClusterBoxMap = pClusterBoxMap;
 	readWriterParam._strPrjId = param.strPrjId;
-	// readWriterParam._pTreeClusterMap = pTreeClusterMap;
+	readWriterParam._pTreeClusterMap = pTreeClusterMap;
 	readWriterParam._denoiseIndexSet = outlierSet;
 	readWriterParam._clearTypeCluster = param.clearTypeCluster;
-	// readWriterParam._pClearCluster = pClearCluster;
+	readWriterParam._pClearCluster = pClearCluster;
 	for (size_t i = 0; i < nNodeCnt; ++i)
 	{
 		// 获取pagedlod对应的模型文件路径
