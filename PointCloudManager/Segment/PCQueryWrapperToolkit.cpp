@@ -440,6 +440,49 @@ bool CPCQueryWrapperToolkit::QueryPointsByClusterId(const pc::data::CModelNodeVe
 		});
 }
 
+bool CPCQueryWrapperToolkit::QueryBoxByClusterId(const pc::data::CModelNodeVector& pcElements,
+												 const std::vector<int>& clusterIds,
+												 std::map<int, osg::BoundingBox>& clusterBox)
+{
+	if (pcElements.empty())
+		return false;
+
+	CBnsProjectNode bnsProject;
+
+	if (nullptr != pcElements.front())
+	{
+		pc::data::CModelNodePtr pProjectNode =
+			pcElements.front()->GetTypeParent((int)eBnsProjectRoot);
+
+		bnsProject = pProjectNode;
+	}
+
+	if (bnsProject.IsNull())
+		return false;
+
+
+	CString strPrjId = bnsProject.GetID();
+	pc::share_ptr<CClusterManager> clusterManager =
+		CClusterManagerSet::GetInst()->GetClusterManager(strPrjId);
+
+	if (!clusterManager.valid())
+		return false;
+
+	auto pModel = d3s::designfile::model::CModelManager::GetInst()->GetMainModel(strPrjId);
+	
+	std::map<CString, pc::data::tagPagedLodFile> fileMap =
+		CPCQueryWrapperToolkit::GetPointCloudFileMap(
+			CPCQueryWrapperToolkit::GetAllPointCloudElements(pModel));
+
+	toolkit::CCriticalSectionHandle CSC;
+	CTbbQueryBoxByClusterId tbbQueryBoxByClusterId(clusterIds,
+												   clusterManager,
+												   clusterBox,
+												   fileMap,
+												   CSC);
+	CTBBParallel::For(0, clusterIds.size(), tbbQueryBoxByClusterId);
+	return true;
+}
 
 bool CPCQueryWrapperToolkit::QueryClusterByBox(const pc::data::CModelNodeVector& pcElements,
 											   const osg::BoundingBox& boundingBox,
