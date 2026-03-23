@@ -743,7 +743,6 @@ void CPointCloudTool::ProcessPointToPiece()
 	CSavePieceProcessThread* pProcessThread = new CSavePieceProcessThread(this);
 	pProcessThread->start();
 
-#ifndef USE_READ_BATCH_POINT
 	I64 nPointCount = 0;
 	I64 nArrPointIndex = 0;
 
@@ -777,51 +776,6 @@ void CPointCloudTool::ProcessPointToPiece()
 
 	// 数组的末尾处理
 	pProcessThread->SetArrPoint(arrPoint, nPointCount);
-#else
-	I64 nPointCount = 0;
-	const double centerX = _centerPoint.x();
-	const double centerY = _centerPoint.y();
-	const double centerZ = _centerPoint.z();
-
-	// 双缓冲区
-	pcl::PointXYZRGBA* arrPoint1 = new pcl::PointXYZRGBA[MAX_MEMORY_POINT_NUM];
-	pcl::PointXYZRGBA* arrPoint2 = new pcl::PointXYZRGBA[MAX_MEMORY_POINT_NUM];
-	pcl::PointXYZRGBA* arrWrite = arrPoint1; // 待写入的缓冲
-	pcl::PointXYZRGBA* arrRead = arrPoint2;	 // 待读取填充的缓冲
-
-	// 批量读取配置
-	const size_t batchSize = 1000000; // 每批读取 100 万点
-	size_t bufferOffset = 0;
-
-	while (true)
-	{
-		// 批量读取点
-		size_t readCount = ReadPoints(arrRead + bufferOffset,
-									  MAX_MEMORY_POINT_NUM - bufferOffset,
-									  centerX,
-									  centerY,
-									  centerZ,
-									  true);
-		bufferOffset += readCount;
-
-		// 缓冲区满或读取完毕，提交处理
-		if (bufferOffset >= MAX_MEMORY_POINT_NUM || readCount == 0)
-		{
-			if (bufferOffset > 0)
-			{
-				pProcessThread->SetArrPoint(arrRead, nPointCount + bufferOffset);
-				nPointCount += bufferOffset;
-				bufferOffset = 0;
-
-				// 交换缓冲区
-				std::swap(arrRead, arrWrite);
-			}
-
-			if (readCount == 0)
-				break;
-		}
-	}
-#endif
 	pProcessThread->WaitComplete();
 	SAFE_DELETE(pProcessThread);
 
