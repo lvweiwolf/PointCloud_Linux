@@ -11,7 +11,9 @@
 
 #include <include/PointCloudManagerExport.h>
 
+#include <BusinessNode/PCNodeType.h>
 #include <BusinessNode/BnsPointCloudNode.h>
+
 
 class POINTCLOUDMANAGER_EXPORT CBnsProjectNode : public pc::data::BnsWrapper
 {

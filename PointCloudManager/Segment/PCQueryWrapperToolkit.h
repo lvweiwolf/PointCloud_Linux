@@ -36,6 +36,27 @@ public:
 	static pc::data::tagPagedLodFile GetPagedLodModelPath(
 		pc::data::CModelNodePtr pPointCloudPagedLod);
 
+
+	static bool QueryPoints(const pc::data::CModelNodeVector& pcElements,
+							const pc::data::SPolygonParam& polygonParam,
+							std::map<int, std::vector<osg::Vec3d>>& vOutTypePointMap,
+							int& nErrorType,
+							int nLevel = -1);
+
+	/**
+	 * 通过分类类型查询点云
+	 * @param [in] pcElements	待查询的点云
+	 * @param [in] typeList		分类列表
+	 * @param [out] pointMap		点集
+	 * @param [in] nLevel		查询层级（默认-1，代表所有层级）
+	 * @return
+	 */
+	static bool QueryPointsByType(const pc::data::CModelNodeVector& pcElements,
+								  const std::vector<unsigned>& typeList,
+								  std::map<unsigned, std::vector<osg::Vec3d>>& pointMap,
+								  unsigned nLevel = -1);
+
+
 	/**
 	 *  函数介绍    	查询元素包围盒列表（static）
 	 *  输入参数    	pcElements	即将被查询包围盒的点云元素
@@ -154,6 +175,17 @@ public:
 										   double dR);
 
 
+
+	/**
+	 * 获取树木信息系数
+	 * @param [in] dL 树木宽度大于 系数L(L>0) 倍PQ距离，则树木有效扫高等于顶底距离
+	 * @param [in] dM 树顶到 系数M(0<M<1) 处点个数大于 系数N(0<N<1)
+	 * 倍总点数，则有效扫高等于包围盒对角长度。
+	 * @param [in] dN 反之等于顶底距离
+	 * @return
+	 */
+	static bool GetTreeInfoCoefficient(double& dL, double& dM, double& dN);
+
 	/**
 	 * 获取点云文件列表
 	 * @param [in] PCElements
@@ -161,7 +193,7 @@ public:
 	 */
 	static std::map<CString, pc::data::tagPagedLodFile> GetPointCloudFileMap(
 		const pc::data::CModelNodeVector& pcElements);
-	
+
 	/*
 	 * 函数介绍：获取Eigen点（static）
 	 * 输入参数：const std::vector<osg::Vec3d> &vPoints			点集

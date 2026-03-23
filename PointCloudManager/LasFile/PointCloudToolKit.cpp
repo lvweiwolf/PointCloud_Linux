@@ -10,9 +10,243 @@ const int POINT_CLOUD_MODELNAMELENGTH = 10;
 // 文件路径符号
 const CString STRING_FILE_PATH_SIGN = L"\\";
 
-CPointCloudToolkit::CPointCloudToolkit(void) {}
+namespace {
 
-CPointCloudToolkit::~CPointCloudToolkit(void) {}
+
+	/**
+	 * 计算点到线段的最短距离，并返回最近点
+	 * @param p 点
+	 * @param a 线段起点
+	 * @param b 线段终点
+	 * @param closestPoint 输出参数，返回线段上最近的点
+	 * @return 点到线段的最短距离
+	 */
+	double pointToSegmentDistance(const osg::Vec3d& p,
+								  const osg::Vec3d& a,
+								  const osg::Vec3d& b,
+								  osg::Vec3d& closestPoint)
+	{
+		osg::Vec3d ab = b - a;
+		osg::Vec3d ap = p - a;
+
+		double abLengthSquared = ab * ab;
+
+		// 线段退化为点的情况
+		if (abLengthSquared < 1e-12)
+		{
+			closestPoint = a;
+			return (p - a).length();
+		}
+
+		// 计算投影参数
+		double t = (ap * ab) / abLengthSquared;
+
+		if (t <= 0.0)
+		{
+			closestPoint = a;
+		}
+		else if (t >= 1.0)
+		{
+			closestPoint = b;
+		}
+		else
+		{
+			closestPoint = a + ab * t;
+		}
+
+		return (p - closestPoint).length();
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////////////
+bool CPointCloudToolkit::NearLineSegment(const osg::Vec3d& tagPt,
+										 const osg::Vec3d& lineSt,
+										 const osg::Vec3d& lineEd,
+										 double dTol /* = 1*/)
+{
+	if (tagPt.x() < std::min(lineSt.x(), lineEd.x()) ||
+		tagPt.x() > std::max(lineSt.x(), lineEd.x()) ||
+		tagPt.y() < std::min(lineSt.y(), lineEd.y()) ||
+		tagPt.y() > std::max(lineSt.y(), lineEd.y()))
+		return false;
+
+	osg::Vec3d nearestPoint;
+	double dDis = pointToSegmentDistance(tagPt, lineSt, lineEd, nearestPoint);
+
+	return dDis < dTol;
+}
+
+char CPointCloudToolkit::PtRelativePolygonPosition(const osg::Vec3d& tagPt,
+												   const std::vector<osg::Vec3d>& polygonPoint)
+{
+	char cPosition = 0;
+	int nCross = 0;
+	int nCount = polygonPoint.size();
+	
+	for (int i = 0; i < nCount; i++)
+	{
+		osg::Vec3d p1 = polygonPoint[i];
+		osg::Vec3d p2 = polygonPoint[(i + 1) % nCount];
+		p1.z() = 0;
+		p2.z() = 0;
+
+		// 将距离边约1个像素的点归类为g_cPolygonBoundary
+		if (NearLineSegment(tagPt, p1, p2, 1))
+		{
+			cPosition = pc::data::SVisitorInfo::g_cPolygonBoundary;
+			break;
+		}
+
+		if (PtRightRadialIntersectLine(tagPt, p1, p2))
+			nCross++;
+	}
+	if (cPosition == pc::data::SVisitorInfo::g_cPolygonBoundary)
+		return cPosition;
+
+	// 交点为偶数（多边形外）、奇数（多边形内）
+	bool bInpolygon = ((nCross % 2) == 1);
+	if ((nCross % 2) == 1)
+		cPosition = pc::data::SVisitorInfo::g_cInPolygon;
+	else
+		cPosition = pc::data::SVisitorInfo::g_cOutPolygon;
+	return cPosition;
+}
+
+
+void CPointCloudToolkit::GetBoundingBoxRange(const std::vector<osg::Vec3d>& vBoundingBoxs,
+											 double& dMinX,
+											 double& dMaxX,
+											 double& dMinY,
+											 double& dMaxY)
+{
+	if (vBoundingBoxs.empty())
+	{
+		return;
+	}
+	int nIndex = 0;
+	dMinX = vBoundingBoxs.at(nIndex).x();
+	dMaxX = vBoundingBoxs.at(nIndex).x();
+	dMinY = vBoundingBoxs.at(nIndex).y();
+	dMaxY = vBoundingBoxs.at(nIndex).y();
+	++nIndex;
+	int nSize = vBoundingBoxs.size();
+	while (nIndex < nSize)
+	{
+		osg::Vec3d point = vBoundingBoxs.at(nIndex);
+		dMinX = std::min<double>(dMinX, point.x());
+		dMaxX = std::max<double>(dMaxX, point.x());
+		dMinY = std::min<double>(dMinY, point.y());
+		dMaxY = std::max<double>(dMaxY, point.y());
+		++nIndex;
+	}
+}
+
+void CPointCloudToolkit::GetBoundingBoxRange(const std::vector<osg::Vec3d>& vBoundingBoxs,
+											 int& nMinX,
+											 int& nMaxX,
+											 int& nMinY,
+											 int& nMaxY)
+{
+	if (vBoundingBoxs.empty())
+	{
+		return;
+	}
+	double dMinX = 0.0;
+	double dMaxX = 0.0;
+	double dMinY = 0.0;
+	double dMaxY = 0.0;
+	GetBoundingBoxRange(vBoundingBoxs, dMinX, dMaxX, dMinY, dMaxY);
+	nMinX = ceil(dMinX);
+	nMaxX = ceil(dMaxX);
+	nMinY = ceil(dMinY);
+	nMaxY = ceil(dMaxY);
+}
+
+std::vector<bool> CPointCloudToolkit::CountPolygonMathValue(
+	const std::vector<osg::Vec3d>& vSelectScreenPoints,
+	unsigned nMaxX,
+	unsigned nMinX,
+	unsigned nMaxY,
+	unsigned nMinY)
+{
+	std::vector<bool> boolVec;
+	if (vSelectScreenPoints.empty())
+		return boolVec;
+
+	boolVec.resize((nMaxY - nMinY + 1) * (nMaxX - nMinX + 1));
+	for (unsigned nX = nMinX; nX <= nMaxX; ++nX)
+	{
+		for (unsigned nY = nMinY; nY <= nMaxY; ++nY)
+		{
+			unsigned nIndex = (nX - nMinX) * (nMaxY - nMinY + 1) + (nY - nMinY + 1) - 1;
+			osg::Vec3d point(nX, nY, 0);
+			boolVec.at(nIndex) = PtInPolygon(point, vSelectScreenPoints);
+		}
+	}
+	return boolVec;
+}
+
+void CPointCloudToolkit::CountPolygonMathValue(const std::vector<osg::Vec3d>& coarsePolygonPt,
+											   const osg::Matrix& coarseVpwMat,
+											   const osg::Matrix& fineVpwMat,
+											   std::vector<char>& coarsePolygon,
+											   pc::data::FinePolygonMap& finePolygonMap)
+{
+	d3s::CTimeLog timeRecord(_T("CPointCloudCommonTool::CountPolygonMathValue 耗时"));
+	coarsePolygon.clear();
+	finePolygonMap.clear();
+	if (coarsePolygonPt.empty())
+		return;
+
+	// 计算粗糙vpw逆矩阵、精细多边形点
+	osg::Matrix coarseVpwMatInverse = osg::Matrix::inverse(coarseVpwMat);
+	std::vector<osg::Vec3d> finePolygonPt;
+	for (const osg::Vec3d& point : coarsePolygonPt)
+	{
+		finePolygonPt.push_back(point * coarseVpwMatInverse * fineVpwMat);
+	}
+
+	int nMaxX = 0;
+	int nMinX = 0;
+	int nMaxY = 0;
+	int nMinY = 0;
+	GetBoundingBoxRange(coarsePolygonPt, nMinX, nMaxX, nMinY, nMaxY);
+	coarsePolygon.resize((nMaxY - nMinY + 1) * (nMaxX - nMinX + 1));
+
+	for (int nX = nMinX; nX <= nMaxX; ++nX)
+	{
+		for (int nY = nMinY; nY <= nMaxY; ++nY)
+		{
+			int nIndex = (nX - nMinX) * (nMaxY - nMinY + 1) + (nY - nMinY + 1) - 1;
+			osg::Vec3d point(nX, nY, 0);
+			coarsePolygon[nIndex] = PtRelativePolygonPosition(point, coarsePolygonPt);
+
+			// 如果在多边形上，则精细化当前像素块
+			if (pc::data::SVisitorInfo::g_cPolygonBoundary == coarsePolygon[nIndex] &&
+				!fineVpwMat.isIdentity())
+			{
+				// 以当前像素点构造像素块
+				std::vector<osg::Vec3d> finePixelPt{
+					osg::Vec3d(nX - 1, nY + 1, 0) * coarseVpwMatInverse * fineVpwMat,
+					osg::Vec3d(nX + 1, nY + 1, 0) * coarseVpwMatInverse * fineVpwMat,
+					osg::Vec3d(nX + 1, nY - 1, 0) * coarseVpwMatInverse * fineVpwMat,
+					osg::Vec3d(nX - 1, nY - 1, 0) * coarseVpwMatInverse * fineVpwMat
+				};
+				auto& finePolygon = finePolygonMap[nIndex];
+				GetBoundingBoxRange(finePixelPt,
+									finePolygon.first._nMinX,
+									finePolygon.first._nMaxX,
+									finePolygon.first._nMinY,
+									finePolygon.first._nMaxY);
+				finePolygon.second = CountPolygonMathValue(finePolygonPt,
+														   finePolygon.first._nMaxX,
+														   finePolygon.first._nMinX,
+														   finePolygon.first._nMaxY,
+														   finePolygon.first._nMinY);
+			}
+		}
+	}
+}
 
 bool CPointCloudToolkit::PtInPolygon(const osg::Vec3d& tagPt,
 									 const std::vector<osg::Vec3d>& screenPointVec)
@@ -418,4 +652,23 @@ CString CPointCloudToolkit::GetNewPageFileName(CString strDatabasePath, const CS
 		bOut = !CFileToolkit::FileExist(strDatabasePath + strNewFileName);
 	}
 	return strNewFileName;
+}
+
+bool CPointCloudToolkit::PtRightRadialIntersectLine(const osg::Vec3d& tagPt,
+													const osg::Vec3d& lineStPt,
+													const osg::Vec3d& lineEdPt)
+{
+	if (lineStPt.y() == lineEdPt.y())
+		return false;
+	if (tagPt.y() < std::min<double>(lineStPt.y(), lineEdPt.y()))
+		return false;
+	if (tagPt.y() >= std::max<double>(lineStPt.y(), lineEdPt.y()))
+		return false;
+
+	// 求交点的x坐标（由直线两点式方程转化而来）
+	double x = (double)(tagPt.y() - lineStPt.y()) * (double)(lineEdPt.x() - lineStPt.x()) /
+				   (double)(lineEdPt.y() - lineStPt.y()) +
+			   lineStPt.x();
+
+	return (x > tagPt.x());
 }

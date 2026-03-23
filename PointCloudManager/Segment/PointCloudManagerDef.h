@@ -362,7 +362,7 @@ namespace pc {
 				  _bAllTraversal(param._bAllTraversal)
 			{
 			}
-			
+
 			osg::Matrix _matVPW;						 // 操作视口vpw矩阵
 			osg::Matrix _sliceMatVPW;					 // 剖切视口vpw矩阵
 			std::vector<osg::Vec3d> _polygonPoints;		 // 操作视口多边形点集
@@ -467,8 +467,8 @@ namespace pc {
 										 倍总点数，则H等于包围盒对角长度。反之等于PQ距离
 									  */
 		};
-		// const CString gl_strTreeInfoCoefficientCfg =
-		// L"..\\PluginsConfig\\PointCloud\\树木信息系数.xml";
+		const CString gl_strTreeInfoCoefficientCfg =
+			L"..\\PluginsConfig\\PointCloud\\树木信息系数.xml";
 
 		// 分类操作后的簇
 		struct SClusterAfterClassify

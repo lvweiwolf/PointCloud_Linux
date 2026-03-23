@@ -1,6 +1,7 @@
 ﻿#include <Segment/PCQueryWrapperToolkit.h>
 #include <Segment/PointCloudBoxQuery.h>
 #include <Segment/PropertyVisitorCommand.h>
+#include <Segment/PointCloudManagerDef.h>
 #include <LasFile/PointCloudToolkit.h>
 #include <LasFile/PointCloudPropertyTool.h>
 #include <BusinessNode/PCNodeType.h>
@@ -8,6 +9,9 @@
 #include <BusinessNode/BnsPointCloudNode.h>
 
 #include <include/ClusterManagerSet.h>
+#include <include/StringToolkit.h>
+
+#include <Tool/LibToolkit.h>
 
 #include <Eigen/Core>
 
@@ -72,6 +76,28 @@ namespace {
 
 		osg::BoundingBox& _box; // 簇包围盒
 		int _nClusterId;		// 簇ID
+	};
+
+	struct SPointTypeMap : public d3s::ReferenceCountObj
+	{
+		SPointTypeMap(std::map<int, std::vector<osg::Vec3d>>& typePointMap)
+			: _typePointMap(typePointMap)
+		{
+		}
+		std::map<int, std::vector<osg::Vec3d>>& _typePointMap;
+		tbb::mutex _mutex;
+	};
+
+	struct SQueryTypeData : public d3s::ReferenceCountObj
+	{
+		SQueryTypeData(const std::vector<unsigned>& typeList,
+					   std::map<unsigned, std::vector<osg::Vec3d>>& pointMap)
+			: _typeList(typeList), _pointMap(pointMap)
+		{
+		}
+		std::vector<unsigned> _typeList;						// 待查询的类型集合
+		std::map<unsigned, std::vector<osg::Vec3d>>& _pointMap; // 类型对应的点集合
+		tbb::mutex _mutex;
 	};
 
 	bool QueryClusterBox_Internal(pc::data::SVisitorCallbackParam& callbackParam)
@@ -167,8 +193,48 @@ namespace {
 		denoiseLevel.params.push_back(param5);
 		return denoiseLevel;
 	}
-}
 
+
+	bool GetPointType(pc::data::SVisitorCallbackParam& callbackParam)
+	{
+		if (nullptr == callbackParam._pAdditionalParam || nullptr == callbackParam._pTexCoordArray)
+			return false;
+
+		SPointTypeMap* pOutTypePointMap =
+			static_cast<SPointTypeMap*>(callbackParam._pAdditionalParam.get());
+		unsigned int nType = 0;
+		CPointCloudPropertyTool::GetSegmentProperty(callbackParam._pTexCoordArray,
+													callbackParam._nIndex,
+													nType);
+
+		tbb::mutex::scoped_lock lock(pOutTypePointMap->_mutex);
+		pOutTypePointMap->_typePointMap[nType].push_back(callbackParam._point);
+		return true;
+	}
+
+	bool QueryTypePoint(pc::data::SVisitorCallbackParam& callbackParam)
+	{
+		if (nullptr == callbackParam._pTexCoordArray)
+			return false;
+
+		uint32_t nType = 0;
+		CPointCloudPropertyTool::GetSegmentProperty(callbackParam._pTexCoordArray,
+													callbackParam._nIndex,
+													nType);
+		auto pQueryTypeData = static_cast<SQueryTypeData*>(callbackParam._pAdditionalParam.get());
+		if (nullptr == pQueryTypeData)
+			return false;
+
+		if (pQueryTypeData->_typeList.end() !=
+			std::find(pQueryTypeData->_typeList.begin(), pQueryTypeData->_typeList.end(), nType))
+		{
+			tbb::mutex::scoped_lock lock(pQueryTypeData->_mutex);
+			pQueryTypeData->_pointMap[nType].push_back(callbackParam._point);
+		}
+
+		return true;
+	}
+}
 ////////////////////////////////////////////////////////////////////////////////
 pc::data::SDenoiseCfg CPCQueryWrapperToolkit::GetDenoiseParam()
 {
@@ -205,6 +271,167 @@ pc::data::tagPagedLodFile CPCQueryWrapperToolkit::GetPagedLodModelPath(
 	strPointTexFilePath += CStringToolkit::UTF8ToCString(strTexFileName);
 
 	return { strPointInfoFilePath, strPointTexFilePath };
+}
+
+bool CPCQueryWrapperToolkit::QueryPoints(const pc::data::CModelNodeVector& pcElements,
+										 const pc::data::SPolygonParam& polygonParam,
+										 std::map<int, std::vector<osg::Vec3d>>& vOutTypePointMap,
+										 int& nErrorType,
+										 int nLevel)
+{
+	if (pcElements.empty())
+		return false;
+
+	CBnsProjectNode bnsProject;
+
+	if (nullptr != pcElements.front())
+	{
+		pc::data::CModelNodePtr pProjectNode =
+			pcElements.front()->GetTypeParent((int)eBnsProjectRoot);
+
+		bnsProject = pProjectNode;
+	}
+
+	if (bnsProject.IsNull())
+		return false;
+
+	nErrorType = 0;
+	// 1.先收集在款选范围内的文件
+	std::vector<pc::data::tagPagedLodFile> vFilePaths;
+	for (auto& pPointCloudElement : pcElements)
+	{
+		pc::data::CModelNodeVector pageLODs;
+		CPointCloudBoxQuery::GetLevelPagedLodList(pPointCloudElement, nLevel, pageLODs);
+
+		for (auto pageLOD : pageLODs)
+		{
+			CBnsPointCloudNode bnsPageLOD = pageLOD;
+			if (bnsPageLOD.IsNull())
+				continue;
+
+
+			if (!polygonParam._bAllTraversal &&
+				!CPointCloudToolkit::JudgePolygonInModel(
+					bnsPageLOD.GetModelBoundingBox(),
+					(const osg::Matrix&)polygonParam._matVPW,
+					(const std::vector<osg::Vec3d>&)polygonParam._polygonPoints))
+			{
+				continue;
+			}
+
+			pc::data::tagPagedLodFile strModelPath =
+				CPCQueryWrapperToolkit::GetPagedLodModelPath(pageLOD);
+			vFilePaths.push_back(strModelPath);
+		}
+	}
+
+	// 2.根据收集的文件做遍历处理
+	pc::data::SVisitorInfos visitorInfos;
+	visitorInfos._bAllTraversal = polygonParam._bAllTraversal;
+	if (!polygonParam._bAllTraversal)
+	{
+		visitorInfos._visitorInfo._coarsePolygonPoints =
+			(const std::vector<osg::Vec3d>&)polygonParam._polygonPoints;
+		visitorInfos._visitorInfo._coarseVPW = (const osg::Matrix&)polygonParam._matVPW;
+		visitorInfos._sliceVisitorInfo._coarseVPW = (const osg::Matrix&)polygonParam._sliceMatVPW;
+		visitorInfos._sliceVisitorInfo._coarsePolygonPoints =
+			(const std::vector<osg::Vec3d>&)polygonParam._slicePolygonPoints;
+
+		pc::data::FinePolygonMap dummy1;
+		CPointCloudToolkit::CountPolygonMathValue(visitorInfos._visitorInfo._coarsePolygonPoints,
+												  visitorInfos._visitorInfo._coarseVPW,
+												  osg::Matrix(),
+												  visitorInfos._visitorInfo._coarsePolygon,
+												  dummy1);
+
+		pc::data::FinePolygonMap dummy2;
+		CPointCloudToolkit::CountPolygonMathValue(
+			visitorInfos._sliceVisitorInfo._coarsePolygonPoints,
+			visitorInfos._sliceVisitorInfo._coarseVPW,
+			osg::Matrix(),
+			visitorInfos._sliceVisitorInfo._coarsePolygon,
+			dummy2);
+	}
+
+	// if (!pcElements.empty())
+	// 	visitorInfos._hideSegmentList =
+	// CPCRenderWrapperToolkit::GetHideSegment(bnsProject.GetID());
+
+	visitorInfos._pPropVisitorCallback = GetPointType;
+	visitorInfos._pAdditionalParam = new SPointTypeMap(vOutTypePointMap);
+
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, vFilePaths.size()),
+					  [&](const tbb::blocked_range<size_t>& r) {
+						  for (size_t i = r.begin(); i != r.end(); ++i)
+						  {
+							  auto strFilePath = vFilePaths.at(i);
+
+							  std::string sPointInfoFileName =
+								  CStringToolkit::CStringToUTF8(strFilePath.strPointInfoFile);
+							  std::string sPointTexFileName =
+								  CStringToolkit::CStringToUTF8(strFilePath.strPointTexFile);
+
+							  osg::ref_ptr<osg::Node> pPageLod =
+								  CPointCloudToolkit::ReadNode(sPointInfoFileName,
+															   sPointTexFileName);
+							  if (!pPageLod.valid())
+								  return;
+
+							  CPcPropVisitorCommand::Excute(pPageLod, visitorInfos);
+						  }
+					  });
+
+	return true;
+}
+
+bool CPCQueryWrapperToolkit::QueryPointsByType(
+	const pc::data::CModelNodeVector& pcElements,
+	const std::vector<unsigned>& typeList,
+	std::map<unsigned, std::vector<osg::Vec3d>>& pointMap,
+	unsigned nLevel)
+{
+	if (pcElements.empty())
+		return false;
+
+	pc::data::CModelNodeVector vPagedLods;
+	for (auto& pPointCloudElement : pcElements)
+	{
+		if (nullptr == pPointCloudElement)
+			continue;
+
+		CPointCloudBoxQuery::GetLevelPagedLodList(pPointCloudElement, nLevel, vPagedLods);
+	}
+
+	pc::data::SVisitorInfos visitorInfos;
+	visitorInfos._bAllTraversal = true;
+	visitorInfos._pPropVisitorCallback = QueryTypePoint;
+	visitorInfos._pAdditionalParam = new SQueryTypeData(typeList, pointMap);
+
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, vPagedLods.size()),
+					  [&](const tbb::blocked_range<size_t>& r) {
+						  for (size_t i = r.begin(); i != r.end(); ++i)
+						  {
+							  if (i >= vPagedLods.size() || nullptr == vPagedLods[i])
+								  return;
+
+							  pc::data::tagPagedLodFile strModelPath =
+								  CPCQueryWrapperToolkit::GetPagedLodModelPath(vPagedLods[i]);
+
+							  std::string sPointInfoFileName =
+								  CStringToolkit::CStringToUTF8(strModelPath.strPointInfoFile);
+							  std::string sPointTexFileName =
+								  CStringToolkit::CStringToUTF8(strModelPath.strPointTexFile);
+
+							  auto pNode = CPointCloudToolkit::ReadNode(sPointInfoFileName,
+																		sPointTexFileName);
+
+							  if (nullptr == pNode)
+								  return;
+
+							  CPcPropVisitorCommand::Excute(pNode, visitorInfos);
+						  }
+					  });
+	return true;
 }
 
 void CPCQueryWrapperToolkit::QueryBoundingBoxList(
@@ -504,47 +731,47 @@ bool CPCQueryWrapperToolkit::QueryBoxByClusterId(const pc::data::CModelNodeVecto
 		CPCQueryWrapperToolkit::GetPointCloudFileMap(pcElements);
 
 	tbb::mutex mutex;
-	tbb::parallel_for(tbb::blocked_range<size_t>(0, clusterIds.size()),
-					  [&](const tbb::blocked_range<size_t>& r) {
-						  for (size_t i = r.begin(); i != r.end(); ++i)
-						  {
-							  if (i >= clusterIds.size() || !clusterManager.valid())
-								  return;
+	tbb::parallel_for(
+		tbb::blocked_range<size_t>(0, clusterIds.size()),
+		[&](const tbb::blocked_range<size_t>& r) {
+			for (size_t i = r.begin(); i != r.end(); ++i)
+			{
+				if (i >= clusterIds.size() || !clusterManager.valid())
+					return;
 
-							  auto clusterItem = clusterManager->FindClusterByID(clusterIds[i]);
-							  if (!clusterItem.valid())
-								  return;
+				auto clusterItem = clusterManager->FindClusterByID(clusterIds[i]);
+				if (!clusterItem.valid())
+					return;
 
-							  auto pageNodeIds = clusterItem->GetPagedLodID();
+				auto pageNodeIds = clusterItem->GetPagedLodID();
 
-							  osg::BoundingBox box;
-							  pc::data::SVisitorInfos visitorInfos;
-							  visitorInfos._bAllTraversal = true;
-							  visitorInfos._pPropVisitorCallback = QueryBoxByClusterId_Internal;
-							  visitorInfos._pAdditionalParam =
-								  new SQueryBoxByClusterId(box, clusterItem->GetId());
+				osg::BoundingBox box;
+				pc::data::SVisitorInfos visitorInfos;
+				visitorInfos._bAllTraversal = true;
+				visitorInfos._pPropVisitorCallback = QueryBoxByClusterId_Internal;
+				visitorInfos._pAdditionalParam =
+					new SQueryBoxByClusterId(box, clusterItem->GetId());
 
-							  for (const auto& strId : pageNodeIds)
-							  {
-								  std::string sPointInfoFileName = CStringToolkit::CStringToUTF8(
-									  fileMap[strId].strPointInfoFile);
-								  std::string sPointTexFileName =
-									  CStringToolkit::CStringToUTF8(fileMap[strId].strPointTexFile);
-								  
-								  auto node = CPointCloudToolkit::ReadNode(sPointInfoFileName,
-																			sPointTexFileName);
-								  if (!node.valid())
-									  continue;
-								  
-								  CPcPropVisitorCommand::Excute(node, visitorInfos);
-							  }
+				for (const auto& strId : pageNodeIds)
+				{
+					std::string sPointInfoFileName =
+						CStringToolkit::CStringToUTF8(fileMap[strId].strPointInfoFile);
+					std::string sPointTexFileName =
+						CStringToolkit::CStringToUTF8(fileMap[strId].strPointTexFile);
 
-							  {
-								  tbb::mutex::scoped_lock lock(mutex);
-								  clusterBox[clusterItem->GetId()] = box;
-							  }
-						  }
-					  });
+					auto node = CPointCloudToolkit::ReadNode(sPointInfoFileName, sPointTexFileName);
+					if (!node.valid())
+						continue;
+
+					CPcPropVisitorCommand::Excute(node, visitorInfos);
+				}
+
+				{
+					tbb::mutex::scoped_lock lock(mutex);
+					clusterBox[clusterItem->GetId()] = box;
+				}
+			}
+		});
 
 
 	return true;
@@ -899,6 +1126,33 @@ bool CPCQueryWrapperToolkit::QueryHasClusterInyCircular(
 
 	auto pData = (SQueryClusterByCircular*)(visitorInfos._pAdditionalParam.get());
 	return pData->_bHasCluster;
+}
+
+
+bool CPCQueryWrapperToolkit::GetTreeInfoCoefficient(double& dL, double& dM, double& dN)
+{
+	toolkit::CXmlDocument doc;
+	CString strCfg;
+	strCfg.Format(_T("%s/%s"),
+				  (LPCTSTR)CLibToolkit::GetAppModuleDir(),
+				  (LPCTSTR)pc::data::gl_strTreeInfoCoefficientCfg);
+
+	if (!doc.LoadFile(strCfg, toolkit::fmtXML) || nullptr == doc.GetElementRoot())
+		return false;
+
+	auto pItem = doc.GetElementRoot()->GetChildElementAt(L"item", FALSE);
+	if (nullptr == pItem)
+		return false;
+	auto pL = pItem->GetAttributeAt(L"L", FALSE);
+	auto pM = pItem->GetAttributeAt(L"M", FALSE);
+	auto pN = pItem->GetAttributeAt(L"N", FALSE);
+	if (nullptr == pL || nullptr == pM || nullptr == pN)
+		return false;
+
+	dL = CStringToolkit::StrToDouble(pL->GetStrValue());
+	dM = CStringToolkit::StrToDouble(pM->GetStrValue());
+	dN = CStringToolkit::StrToDouble(pN->GetStrValue());
+	return true;
 }
 
 std::map<CString, pc::data::tagPagedLodFile> CPCQueryWrapperToolkit::GetPointCloudFileMap(
