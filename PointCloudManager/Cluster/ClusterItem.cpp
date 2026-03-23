@@ -41,7 +41,7 @@ void CClusterItem::Save(d3s::share_ptr<CClusterItem> pCluster, toolkit::CXmlElem
 	for (auto strPageLodId : pageLodIdList)
 	{
 		if (!strPageLodIdText.IsEmpty())
-			strPageLodIdText.Format(_T("%s;%s"), (LPCTSTR)strPageLodIdText, (LPCTSTR)strPageLodId);
+			strPageLodIdText += _T(";") + strPageLodId;
 		else
 			strPageLodIdText = strPageLodId;
 	}

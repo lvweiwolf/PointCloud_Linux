@@ -21,7 +21,7 @@ std::map<char, bool> GetSegmentShowType()
 	showTypeMap[pc::data::INSULATOR_CLASSIFY] = true;
 	showTypeMap[pc::data::JK_GROUND_WIRE_CLASSIFY] = true;
 
-	// return std::move(showTypeMap);
+	return showTypeMap;
 }
 
 int main(int argc, char* argv[])
@@ -56,18 +56,17 @@ int main(int argc, char* argv[])
 
 	/*2.导入las文件*/
 	auto start = std::chrono::steady_clock::now();
-	
+
 	/*2.导入las文件*/
 	CLasFileToolkit::ImportLasFile({ strLasFile }, bnsProject, strProjectPath);
 
 	auto end = std::chrono::steady_clock::now();
 	auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 	std::cout << "ImportLasFile() cost: " << elapsed_ms.count() << " ms" << std::endl;
-	
-	/*3.保存工程文件*/
-	CProjectManagerTool::SaveProject(strProjectFile, bnsProject);
 
-	/*4.自动分类*/
+
+#if 1
+	/*3.自动分类*/
 	pc::data::SegmentParam segmentParam;
 
 	segmentParam._strVolLevel = L"500kV";
@@ -79,15 +78,23 @@ int main(int argc, char* argv[])
 	pc::data::CModelNodeVector nodes = bnsProject.GetPointCloudNodeList();
 	CPCAutoSegmentToolkit::Segment(nodes, segmentParam, clusterBoxMap, mapConvertType);
 
+
+	// 4. 单木分割(测试)
+	osg::BoundingBox bbox(-78.9816284, -184.480499, 0.0, 129.116196, 127.675163, 0.0);
+	std::set<unsigned> vegetationTypes = { 2 };
+	std::map<unsigned, osg::BoundingBox> clusterBoxMap2;
+	const unsigned groundType = 1;
+
+	CPCAutoSegmentToolkit::TreeIndividual(nodes, bbox, vegetationTypes, groundType, clusterBoxMap2);
+
+
 	/*5.导出las*/
-	CLasFileToolkit::ExportLasFile(bnsProject, CFileToolkit::GetFileDirectory(strLasFile));
+	// CLasFileToolkit::ExportLasFile(bnsProject, CFileToolkit::GetFileDirectory(strLasFile));
+#endif
 
-	/* d3s::pcs::ICloudSegmentation* seg =
-	 d3s::pcs::CreateSegmentation(SegClassification::eSegmentGround); std::string  strOptionPath=
-	 "/home/whm/test.ini"; d3s::pcs::IOptions* opt = d3s::pcs::CreateOptions(strOptionPath.c_str());
-	 std::vector<d3s::pcs::PointId> result;
-	 seg->Segment(opt, result);*/
 
+	/*6.保存工程文件*/
+	CProjectManagerTool::SaveProject(strProjectFile, bnsProject);
 
 	d3s::CLog::Info("%s 向你问好!\n", "ConsoleApplicationTestSeg");
 	return 0;

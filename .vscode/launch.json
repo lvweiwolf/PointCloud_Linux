@@ -9,10 +9,10 @@
             "type": "lldb",
             "request": "launch",
             "program": "${workspaceFolder}/out/build/linux-debug/bin/AppStarter",
-            "args": ["/home/lvwei/cloud/temp/test.las", "/home/lvwei/cloud/temp/projects/"],
+            "args": ["/home/lvwei/cloud/temp/qa.las", "/home/lvwei/cloud/temp/projects/"],
             "cwd": "${workspaceFolder}",
             "stopOnEntry": false,
-            "env":{
+            "env":{ 
                 "LD_LIBRARY_PATH": "/home/lvwei/cloud/ThirdPart/lib:/home/lvwei/cloud/ThirdPart/lib64:$LD_LIBRARY_PATH"
             },
             "preLaunchTask": "CMake: 生成"
@@ -22,7 +22,7 @@
             "type": "lldb",
             "request": "launch",
             "program": "${workspaceFolder}/out/build/linux-release/bin/AppStarter",
-            "args": [],
+            "args": ["/home/lvwei/cloud/temp/qa.las", "/home/lvwei/cloud/temp/projects/"],
             "cwd": "${workspaceFolder}",
             "stopOnEntry": false,
             "env":{

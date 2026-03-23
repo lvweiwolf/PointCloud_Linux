@@ -22,6 +22,8 @@ public:
 
 	// 保存工程
 	static bool SaveProject(const CString& strFile, CBnsProjectNode bnsProject);
+
+	
 };
 
 #endif // PROJECTMANAGERTOOL_H_

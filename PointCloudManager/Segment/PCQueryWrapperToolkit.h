@@ -153,6 +153,15 @@ public:
 										   osg::Vec3d center,
 										   double dR);
 
+
+	/**
+	 * 获取点云文件列表
+	 * @param [in] PCElements
+	 * @return <pagenode id, 文件>
+	 */
+	static std::map<CString, pc::data::tagPagedLodFile> GetPointCloudFileMap(
+		const pc::data::CModelNodeVector& pcElements);
+	
 	/*
 	 * 函数介绍：获取Eigen点（static）
 	 * 输入参数：const std::vector<osg::Vec3d> &vPoints			点集
