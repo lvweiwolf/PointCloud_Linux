@@ -10,6 +10,7 @@
 #include <include/ClusterManagerSet.h>
 #include <include/PointCloudSegAPI.h>
 
+#include <numeric>
 #include <osgDB/WriteFile>
 
 #include <tbb/parallel_for.h>
@@ -168,6 +169,282 @@ namespace {
 
 		return pClusterPntsMap;
 	}
+
+
+	void GetArea(const std::vector<osg::Vec3d>& vTileCentroids, std::vector<osg::Vec3d>& outPnts)
+	{
+		double dxMin = DBL_MAX, dyMin = DBL_MAX;
+		double dxMax = -DBL_MAX, dyMax = -DBL_MAX;
+		osg::Vec3d xMin, yMin, xMax, yMax;
+		for (auto& pnt : vTileCentroids)
+		{
+			if (pnt.x() < dxMin)
+			{
+				dxMin = pnt.x();
+				xMin = pnt;
+			}
+			else if (pnt.x() > dxMax)
+			{
+				dxMax = pnt.x();
+				xMax = pnt;
+			}
+
+			if (pnt.y() < dyMin)
+			{
+				dyMin = pnt.y();
+				yMin = pnt;
+			}
+			else if (pnt.y() > dyMax)
+			{
+				dyMax = pnt.y();
+				yMax = pnt;
+			}
+		}
+		outPnts.emplace_back(xMin);
+		outPnts.emplace_back(xMax);
+		outPnts.emplace_back(yMin);
+		outPnts.emplace_back(yMax);
+	}
+
+
+	static bool VectorVaild(std::vector<int>& vTileIndices)
+	{
+		bool bResult = false;
+		for (auto var : vTileIndices)
+		{
+			if (var != CALCULATE_PCDIR_VALIDINDEX)
+			{
+				bResult = true;
+				break;
+			}
+		}
+
+		return bResult;
+	}
+
+	void CalculateBoxDir(std::vector<osg::BoundingBox>& boundingBoxs,
+						 const osg::Vec3d& centerPt,
+						 std::vector<std::pair<osg::BoundingBox, osg::Vec3>>& pcBoxDir)
+	{
+		std::vector<osg::Vec3d> boxCenters;
+		osg::Vec3d totalCenter;
+		for (const auto& box : boundingBoxs)
+		{
+			boxCenters.emplace_back(box.center());
+			totalCenter += box.center();
+		}
+
+		totalCenter /= boundingBoxs.size();
+		osg::Vec3d major, middle, minor;
+		CPCQueryWrapperToolkit::GetEigenVectors(major, middle, minor, boxCenters);
+
+		if ((totalCenter - centerPt) * major < 0)
+			major = -major;
+
+		major.normalize();
+		osg::BoundingBox tempBox;
+
+		for (const auto& iter : boundingBoxs)
+			tempBox.expandBy(iter);
+
+		pcBoxDir.push_back(std::pair<osg::BoundingBox, osg::Vec3>(tempBox, major));
+
+		// 排序获取末尾坐标
+		std::sort(boundingBoxs.begin(),
+				  boundingBoxs.end(),
+				  [&](const osg::BoundingBox& A, const osg::BoundingBox& B) {
+					  const auto& lhs = A.center();
+					  const auto& rhs = B.center();
+					  osg::Vec3 d1 = lhs - centerPt;
+					  double l1 = d1.length();
+					  d1.normalize();
+					  double project1 = major * d1 * l1;
+					  osg::Vec3 d2 = rhs - centerPt;
+					  double l2 = d2.length();
+					  d2.normalize();
+					  double project2 = major * d2 * l2;
+					  return project1 < project2;
+				  });
+	}
+
+
+
+	void CalculateDir(std::vector<CPCAlgorithmToolkit::SPowerParam>& towerDirPts,
+					  std::vector<CPCAlgorithmToolkit::SPowerParam>& towerPts,
+					  const CPCAlgorithmToolkit::SPowerParam& tmpPt,
+					  const double& dMaxSpan)
+	{
+		// 查找当前点距离最近的下一个点
+		double dMinSpan = DBL_MAX;
+		size_t dMinSpanIndex = 0;
+		size_t nCount = towerPts.size();
+
+		for (size_t i = 0; i < towerPts.size(); ++i)
+		{
+			double dSpan = (tmpPt._towerPt - towerPts[i]._towerPt).length();
+			if (dMinSpan > dSpan)
+			{
+				dMinSpan = dSpan;
+				dMinSpanIndex = i;
+			}
+		}
+
+		// 若存在下一个点，则递归查找后续
+		if (dMinSpan < dMaxSpan && dMinSpanIndex < towerPts.size())
+		{
+			towerDirPts.push_back(towerPts[dMinSpanIndex]);
+			towerPts.erase(towerPts.begin() + dMinSpanIndex);
+
+			if (!towerPts.empty())
+			{
+				CalculateDir(towerDirPts, towerPts, towerDirPts.back(), dMaxSpan);
+			}
+		}
+	}
+
+
+	// 对数组的添加操作进行加锁 用于多线程
+	struct tagPagedLodArray
+	{
+		void AddArray(const std::vector<osg::ref_ptr<CPointCloudpagedLod>>& vecPagedLod)
+		{
+			tbb::mutex::scoped_lock lock(_mutex);
+			_vecPagedLod.insert(_vecPagedLod.end(), vecPagedLod.begin(), vecPagedLod.end());
+		}
+
+		std::vector<osg::ref_ptr<CPointCloudpagedLod>> _vecPagedLod;
+		tbb::mutex _mutex;
+	};
+
+	// 收集节点数据
+	class CTbbCollectPagedLod
+	{
+	public:
+		CTbbCollectPagedLod(const pc::data::CModelNodeVector& pcElements,
+							const pc::data::tagTravelInfo& travelInfo,
+							tagPagedLodArray& arrPagedLod)
+			: _vecPCElement(pcElements), _travelInfo(travelInfo), _arrPagedLod(arrPagedLod)
+		{
+			// 根据直线与半径参数构建包围盒
+			d3s::platform::data::Vec3 vecDir = _travelInfo.endPnt - _travelInfo.beginPnt;
+			d3s::platform::data::Vec3 center = (_travelInfo.endPnt + _travelInfo.beginPnt) / 2;
+			d3s::share_ptr<d3s::element::CConeElement> pConeElement =
+				new d3s::element::CConeElement(d3s::platform::data::Vec3(0, 0, 0),
+											   _travelInfo.fRadius,
+											   _travelInfo.fRadius,
+											   vecDir.length() + _travelInfo.fRadius * 2);
+			pConeElement->Build();
+
+			// 进行旋转+平移
+			vecDir.normalize();
+			d3s::platform::data::Matrix matrix =
+				d3s::platform::data::Matrix::rotate(d3s::platform::data::Vec3(0, 1, 0), vecDir) *
+				d3s::platform::data::Matrix::translate(center);
+			pConeElement->SetMatrix(matrix);
+
+
+			_boundingboxTravel = (osg::BoundingBox&)pConeElement->getBoundingBox();
+		};
+
+		void operator()(const int& i) const
+		{
+			osg::ref_ptr<osg::Node> pNode = CElementNodeHandler::GetSceneNode(_vecPCElement.at(i));
+			if (nullptr == pNode)
+				return;
+
+			CPagedLodVisitor nodeVisitor(_travelInfo, _boundingboxTravel);
+			pNode->accept(nodeVisitor);
+			_arrPagedLod.AddArray(nodeVisitor.vecPagedLod);
+		}
+
+	private:
+		const std::vector<d3s::share_ptr<CPointCloudElement>>& _vecPCElement;
+		const pc::data::tagTravelInfo& _travelInfo;
+		tagPagedLodArray& _arrPagedLod;
+		osg::BoundingBox _boundingboxTravel;
+	};
+
+	// 对于满足条件的节点进行遍历找点
+	struct tagPointArray
+	{
+		tagPointArray(std::vector<pc::data::tagPointIndex>& vecResult)
+			: _vecResult(vecResult) {
+
+			  };
+
+		void AddArray(const std::vector<pc::data::tagPointIndex>& vecPoint)
+		{
+			toolkit::CCriticalSectionSync cs(_CSC);
+			_vecResult.insert(_vecResult.end(), vecPoint.begin(), vecPoint.end());
+		};
+
+		bool IsEmpty()
+		{
+			toolkit::CCriticalSectionSync cs(_CSC);
+			return _vecResult.empty();
+		};
+
+	private:
+		std::vector<pc::data::tagPointIndex>& _vecResult;
+		toolkit::CCriticalSectionHandle _CSC;
+	};
+
+	class CTbbCollectPoint
+	{
+	public:
+		CTbbCollectPoint(const std::vector<osg::ref_ptr<CPointCloudpagedLod>>& vecPCElement,
+						 const pc::data::tagTravelInfo& travelInfo,
+						 tagPointArray& arrPoint,
+						 ESearchMode eSearchMode)
+			: _vecPCNode(vecPCElement),
+			  _travelInfo(travelInfo),
+			  _arrPoint(arrPoint),
+			  _eSearchMode(eSearchMode) {};
+
+		void operator()(const int& i) const
+		{
+			// 仅检查是否存在点
+			if ((_eSearchMode == eCheckExistPnt) && !_arrPoint.IsEmpty())
+			{
+				return;
+			}
+
+			// 检查节点是否需要加载
+			unsigned int nFilePos = _vecPCNode.at(i)->getNumPriorityScales();
+			unsigned int nChildNum = _vecPCNode.at(i)->getNumChildren();
+			osg::ref_ptr<osg::Node> pTmpNode = nullptr;
+			if (nFilePos == nChildNum)
+			{
+				pTmpNode = _vecPCNode.at(i)->getChild(nFilePos - 1);
+			}
+			else if (pc::data::eAllDataTravel == _travelInfo.eMode)
+			{
+				// 加载文件
+				std::string pointFilePath = _vecPCNode.at(i)->getDatabasePath() +
+											_vecPCNode.at(i)->getFileName(nFilePos - 1);
+				std::string texFileName =
+					_vecPCNode.at(i)->getDatabasePath() + _vecPCNode.at(i)->GetOldFileName();
+				pTmpNode = CPointCloudToolkit::ReadNode(pointFilePath, texFileName);
+			}
+
+			if (nullptr == pTmpNode)
+			{
+				return;
+			}
+
+			// 遍历节点
+			CPCCollectVisitor nodeVisitor(_travelInfo, _eSearchMode);
+			nodeVisitor._vecPoint.reserve(_vecPCNode.at(i)->GetPointsNum()); // 扩容数组
+			pTmpNode->accept(nodeVisitor);
+			_arrPoint.AddArray(nodeVisitor._vecPoint);
+		}
+
+	private:
+		const std::vector<osg::ref_ptr<CPointCloudpagedLod>>& _vecPCNode;
+		const pc::data::tagTravelInfo& _travelInfo;
+		tagPointArray& _arrPoint;
+		ESearchMode _eSearchMode;
+	};
 }
 
 /////////////////////////////////////////////////////////////////////////
@@ -748,12 +1025,12 @@ bool CPCAlgorithmToolkit::GlFastEuclidean(const pc::data::CModelNodeVector& pcEl
 	d3s::pcs::ICloudClustering* pCloudClustering = d3s::pcs::CreateCloudClustering();
 	pCloudClustering->SetCloudInput(pPointCloud);
 	d3s::pcs::ICloudClustering::Clusters clusters;
-	
+
 	// 快速聚类最少点个数为100
 	unsigned nMinPointSize = 100;
 	pCloudClustering->EuclideanClusterFast(EUCLIDEAN_TOLERANCE, nMinPointSize, UINT_MAX, clusters);
 	delete pCloudClustering;
-	
+
 	for (const auto& iter : clusters)
 	{
 		osg::BoundingBox tmpBox;
@@ -766,9 +1043,365 @@ bool CPCAlgorithmToolkit::GlFastEuclidean(const pc::data::CModelNodeVector& pcEl
 	}
 
 	d3s::CLog::Info(_T("CPCAlgorithmWrapperToolkit::GlFastEuclidean退出"));
-	
+
 	return true;
 }
+
+bool CPCAlgorithmToolkit::CalculatePointCloudDir(
+	const pc::data::CModelNodeVector& pcElements,
+	const osg::Vec3& startPt,
+	std::vector<std::pair<osg::BoundingBox, osg::Vec3>>& pcBoxDir)
+{
+	std::vector<osg::BoundingBox> pageLodBoxs;
+	std::vector<osg::Vec3d> pageLodBoxCenters;
+	for (auto& pPointCloudElement : pcElements)
+	{
+		pc::data::CModelNodeVector pageLODs;
+		CPointCloudBoxQuery::GetLevelPagedLodList(pPointCloudElement,
+												  pc::data::JINGXI_LEVEL,
+												  pageLODs);
+		for (auto pageLOD : pageLODs)
+		{
+			CBnsPointCloudNode bnsPageLOD = pageLOD;
+			if (bnsPageLOD.IsNull())
+				continue;
+
+
+			auto box = bnsPageLOD.GetModelBoundingBox();
+
+			box._min.z() = box._max.z() = 0;
+			pageLodBoxs.emplace_back(box);
+			pageLodBoxCenters.emplace_back(box.center());
+		}
+	}
+
+	std::vector<osg::Vec3d> outPnts;
+	GetArea(pageLodBoxCenters, outPnts);
+	std::sort(outPnts.begin(), outPnts.end(), [&](const osg::Vec3d& pnt, const osg::Vec3d& anoPnt) {
+		return (startPt - pnt).length() < (startPt - anoPnt).length();
+	});
+
+	osg::Vec3d firstCenter = outPnts.front();
+	// 创建瓦片索引
+	std::vector<int> vTileIndices(pageLodBoxs.size());
+	std::iota(vTileIndices.begin(), vTileIndices.end(), 0);
+	double dStep = CALCULATE_PCDIR_STEP * pageLodBoxs.front().radius();
+	int nStep = CALCULATE_PCDIR_STEP / CALCULATE_PCDIR_STEP;
+	std::vector<osg::BoundingBox> tmpBoxs;
+
+	while (VectorVaild(vTileIndices))
+	{
+		for (size_t i = 0; i < vTileIndices.size(); ++i)
+		{
+			if (vTileIndices[i] == CALCULATE_PCDIR_VALIDINDEX)
+				continue;
+			double dDis = dStep * nStep;
+			if (fabs(pageLodBoxs[vTileIndices[i]].center().x() - firstCenter.x()) > dDis ||
+				fabs(pageLodBoxs[vTileIndices[i]].center().y() - firstCenter.y()) > dDis)
+				continue;
+			tmpBoxs.push_back(pageLodBoxs[vTileIndices[i]]);
+			vTileIndices[i] = CALCULATE_PCDIR_VALIDINDEX;
+		}
+		++nStep;
+		if (tmpBoxs.empty())
+			continue;
+
+		// 满足分辨方向的条件
+		osg::BoundingBox allTmpBox;
+		for (const auto& iter : tmpBoxs)
+			allTmpBox.expandBy(iter);
+		double xLength = allTmpBox.xMax() - allTmpBox.xMin(),
+			   yLength = allTmpBox.yMax() - allTmpBox.yMin();
+		if (xLength * CALCULATE_PCDIR_STEP < yLength || yLength * CALCULATE_PCDIR_STEP < xLength)
+		{
+			CalculateBoxDir(tmpBoxs, firstCenter, pcBoxDir);
+			firstCenter = tmpBoxs.back().center();
+			tmpBoxs.clear();
+			nStep = 1;
+		}
+	}
+	if (!tmpBoxs.empty())
+		CalculateBoxDir(tmpBoxs, firstCenter, pcBoxDir);
+
+	return true;
+}
+
+bool CPCAlgorithmToolkit::CalculatePowerLineDir(std::vector<SPowerParam>& towerPts,
+												const osg::Vec3d& startPt,
+												const double& dMaxSpan)
+{
+	// 杆塔数量为0,、1计算走向均无意义
+	if (towerPts.empty() || towerPts.size() == 1)
+		return false;
+
+	// 查找起点位置
+	size_t nStartPtIndex = 0;
+	double dLength = DBL_MAX;
+	size_t nCount = towerPts.size();
+
+	for (size_t i = 0; i < nCount; ++i)
+	{
+		double dCurLength = (startPt - towerPts[i]._towerPt).length();
+		if (dLength > dCurLength)
+		{
+			dLength = dCurLength;
+			nStartPtIndex = i;
+		}
+	}
+
+	SPowerParam tmpPt = towerPts[nStartPtIndex];
+	towerPts.erase(towerPts.begin() + nStartPtIndex);
+
+	// 按起点延伸，查询线路
+	std::vector<SPowerParam> towerBeginDirPts;
+	std::vector<SPowerParam> towerEndDirPts;
+	CalculateDir(towerBeginDirPts, towerPts, tmpPt, dMaxSpan);
+	CalculateDir(towerEndDirPts, towerPts, tmpPt, dMaxSpan);
+
+	// 判断起始（通过所选起点在线路次序判断起始，否则通过距离）
+	towerPts.clear();
+
+	if (towerBeginDirPts.size() == 0 && towerEndDirPts.size() == 0)
+	{
+		towerPts.push_back(tmpPt);
+	}
+	else if (towerBeginDirPts.size() < towerEndDirPts.size())
+	{
+		towerPts.insert(towerPts.end(), towerBeginDirPts.rbegin(), towerBeginDirPts.rend());
+		towerPts.push_back(tmpPt);
+		towerPts.insert(towerPts.end(), towerEndDirPts.begin(), towerEndDirPts.end());
+	}
+	else if (towerBeginDirPts.size() > towerEndDirPts.size())
+	{
+		towerPts.insert(towerPts.end(), towerEndDirPts.rbegin(), towerEndDirPts.rend());
+		towerPts.push_back(tmpPt);
+		towerPts.insert(towerPts.end(), towerBeginDirPts.begin(), towerBeginDirPts.end());
+	}
+	else if ((towerBeginDirPts.back()._towerPt - tmpPt._towerPt).length() <
+			 (towerEndDirPts.back()._towerPt - tmpPt._towerPt).length())
+	{
+		towerPts.insert(towerPts.end(), towerBeginDirPts.rbegin(), towerBeginDirPts.rend());
+		towerPts.push_back(tmpPt);
+		towerPts.insert(towerPts.end(), towerEndDirPts.begin(), towerEndDirPts.end());
+	}
+	else
+	{
+		towerPts.insert(towerPts.end(), towerEndDirPts.rbegin(), towerEndDirPts.rend());
+		towerPts.push_back(tmpPt);
+		towerPts.insert(towerPts.end(), towerBeginDirPts.begin(), towerBeginDirPts.end());
+	}
+
+	return true;
+}
+
+bool CPCAlgorithmToolkit::ApproxCluster(const std::vector<osg::Vec3d>& cluster,
+										std::vector<osg::Vec3d>& curve,
+										const double& dT)
+{
+	// ICloudSegmentationServicePtr pCloudSegmentationService =
+	// 	SHARE_PTR_CAST(d3s::pcs::ICloudSegmentationService,
+	// 				   GetService(SERVICE_POINTCLOUD_SEGMENTATION));
+	// if (nullptr == pCloudSegmentationService.get())
+	// {
+	// 	d3s::CLog::Error(_T("d3s::pcs::ICloudSegmentationService服务为空"));
+	// 	return false;
+	// }
+
+	if (cluster.size() < PARABOLA_MIN_POINT_SIZE)
+	{
+		d3s::CLog::Error(_T("拟合点个数小于3"));
+		return false;
+	}
+
+	// 构造PointCloud
+	IPointCloudPtr pPointCloud = d3s::pcs::CreatePointCloud();
+	pPointCloud->SetSize(cluster.size());
+	int nPntIndex = 0;
+
+	for (const auto& iter : cluster)
+	{
+		pPointCloud->FillOsgPoint((osg::Vec3d&)iter, nPntIndex++);
+	}
+
+	// 拟合
+	d3s::pcs::ICloudCurveFitting* pCloudCurveFitting = d3s::pcs::CreatePowerlineFitting();
+
+	pCloudCurveFitting->SetCloudInput(pPointCloud);
+	d3s::pcs::PARACURVE params;
+
+	if (!pCloudCurveFitting->CurveFitting(0, params))
+	{
+		d3s::CLog::Error(_T("d3s::pcs::ICloudCurveFitting::CurveFitting拟合失败"));
+		return false;
+	}
+
+	// 采样
+	osg::Matrix rotateInverse = osg::Matrix::inverse((osg::Matrix&)params.rotate);
+	for (double y = params.ymin; y < params.ymax; y += dT)
+	{
+		double z = params.a * y * y + params.b * y + params.c;
+		curve.push_back(osg::Vec3d(params.xmean, y, z));
+	}
+
+	for (auto& point : curve)
+	{
+		point = rotateInverse.preMult(point);
+		point += (osg::Vec3d&)params.origin;
+	}
+
+	delete pCloudCurveFitting;
+	pCloudCurveFitting = nullptr;
+	return true;
+}
+
+std::vector<int> CPCAlgorithmToolkit::Approx(const std::vector<osg::Vec3d>& cluster,
+											 const std::vector<osg::Vec3d>& points,
+											 const double& dHreshold)
+{
+	std::vector<int> indexList;
+	// ICloudSegmentationServicePtr pCloudSegmentationService =
+	// 	SHARE_PTR_CAST(d3s::pcs::ICloudSegmentationService,
+	// 				   GetService(SERVICE_POINTCLOUD_SEGMENTATION));
+	// if (nullptr == pCloudSegmentationService.get())
+	// {
+	// 	d3s::CLog::Error(_T("d3s::pcs::ICloudSegmentationService服务为空"));
+	// 	return indexList;
+	// }
+
+	if (cluster.size() < PARABOLA_MIN_POINT_SIZE)
+	{
+		d3s::CLog::Error(_T("拟合点个数小于3"));
+		return indexList;
+	}
+
+	// 构造PointCloud
+	IPointCloudPtr pPointCloud = d3s::pcs::CreatePointCloud();
+	pPointCloud->SetSize(cluster.size());
+	int nPntIndex = 0;
+
+	for (const auto& iter : cluster)
+	{
+		pPointCloud->FillOsgPoint((osg::Vec3d&)iter, nPntIndex++);
+	}
+
+	// 拟合
+	d3s::pcs::ICloudCurveFitting* pCloudCurveFitting = d3s::pcs::CreatePowerlineFitting();
+	pCloudCurveFitting->SetCloudInput(pPointCloud);
+	d3s::pcs::PARACURVE params;
+	if (!pCloudCurveFitting->CurveFitting(0, params))
+	{
+		d3s::CLog::Error(_T("d3s::pcs::ICloudCurveFitting::CurveFitting拟合失败"));
+		return indexList;
+	}
+
+	// 判断抛物线方程拟合结果 和 点云簇的距离是否满足误差范围
+	double dDistance2 = dHreshold * dHreshold;
+	int nCount = points.size();
+	osg::Matrix mt = (osg::Matrix&)params.rotate;
+	osg::Matrix ivMt = osg::Matrixd::inverse(mt);
+	for (int i = 0; i < nCount; ++i)
+	{
+		// 原始点和抛物线方程点之间的坐标转换
+		osg::Vec3d tempPoint;
+		osg::Vec3d point = (points[i] - (osg::Vec3d&)params.origin) * (osg::Matrix&)params.rotate;
+		tempPoint.y() = point.y();
+		double dY = point.y();
+		double dZ = point.z() - ((osg::Vec3d&)params.origin).z();
+		tempPoint.z() = params.a * dY * dY + params.b * dY + params.c;
+		tempPoint.x() = params.xmean;
+
+		// 抛物线点和原始点之间的坐标转换
+		tempPoint = tempPoint * ivMt + (osg::Vec3d&)params.origin;
+
+		// 判断和原始点的距离(points[i] tempPoint)
+		double dPtLenth2 = (points[i] - tempPoint).length2();
+		if (dPtLenth2 > dDistance2)
+			continue;
+
+		indexList.push_back(i);
+	}
+
+#if 0
+	 AddDebuggerCurve(params);
+#endif
+
+	delete pCloudCurveFitting;
+	pCloudCurveFitting = nullptr;
+	return indexList;
+}
+
+std::vector<osg::Vec3d> CPCAlgorithmToolkit::GetPointsProjectionPlace(
+	const pc::data::CModelNodeVector& pcElements,
+	const std::vector<osg::Vec3d>& vecPnt)
+{
+	std::vector<osg::Vec3d> vecReturnPnt;
+
+	osg::BoundingBox boundBox;
+	for (auto iter : vecPnt)
+		boundBox.expandBy(iter);
+
+	pc::data::tagTravelInfo travelInfo;
+	// 处理仅有一个点的情况
+	if (1 == vecPnt.size())
+	{
+		// 向任意方向两侧延伸
+		travelInfo.beginPnt = vecPnt.front() + osg::Vec3(1, 0, 0) * 0.5;
+		travelInfo.endPnt = vecPnt.front() - osg::Vec3(1, 0, 0) * 0.5;
+	}
+	else
+	{
+		travelInfo.beginPnt = boundBox._min;
+		travelInfo.endPnt = boundBox._max;
+	}
+
+
+	CBnsPointCloudNode bnsPageLOD = pcElements.front();
+	travelInfo.fRadius = bnsPageLOD.GetModelBoundingBox().radius();
+	travelInfo.eMode = pc::data::eAllDataTravel;
+	travelInfo.bOnlyInLine = true;
+	std::vector<pc::data::tagPointIndex> vecResult;
+	vecResult.reserve(10000 * 600);
+	CPCAlgorithmWrapperToolkit::SearchInRangePointCloud(pointEleVec, travelInfo, vecResult);
+
+	std::vector<pc::data::tagPointIndex> vecPlaceIndex;
+	for (auto& iterResult : vecResult)
+	{
+		uint32_t nType = iterResult._nType;
+		switch (nType)
+		{
+		case 1: // 地面
+				// case 2:	//植物
+		{
+			vecPlaceIndex.emplace_back(iterResult);
+		}
+		break;
+			break;
+		default:
+			break;
+		}
+	}
+
+	for (auto iterLine : vecPnt)
+	{
+		pc::Vec2 vec2Line(iterLine.x(), iterLine.y());
+		pc::Vec3 tmpPnt;	  // 投影点
+		float fDis = FLT_MAX; // 最近距离
+		for (auto iterPlace : vecPlaceIndex)
+		{
+			pc::Vec2 vec2Place(iterPlace._pnt.x(), iterPlace._pnt.y());
+			float fTmpDis = (vec2Line - vec2Place).length2();
+			if (fTmpDis < fDis)
+			{
+				tmpPnt = iterPlace._pnt;
+				fDis = fTmpDis;
+			}
+		}
+		vecReturnPnt.emplace_back(tmpPnt);
+	}
+
+	return vecReturnPnt;
+}
+
 
 double CPCAlgorithmToolkit::CalPolygonArea(const std::vector<osg::Vec3d>& polygonPnts)
 {
@@ -781,4 +1414,24 @@ double CPCAlgorithmToolkit::CalPolygonArea(const std::vector<osg::Vec3d>& polygo
 
 	boost::geometry::correct(poly);
 	return boost::geometry::area(poly);
+}
+
+bool SearchInRangePointCloud(const pc::data::CModelNodeVector& pcElements,
+							 const pc::data::tagTravelInfo& travelInfo,
+							 std::vector<pc::data::tagPointIndex>& vecResult)
+{
+	// 收集包围盒满足条件的pagedlod节点
+	tagPagedLodArray arrPagedLod;
+	CTbbCollectPagedLod parallel(pcElements, travelInfo, arrPagedLod);
+	CTBBParallel::For(0, pcElements.size(), parallel);
+
+	// 收集在区域中的点
+	tagPointArray arrPoint(vecResult);
+	CTbbCollectPoint parallelCollectPoint(arrPagedLod._vecPagedLod,
+										  travelInfo,
+										  arrPoint,
+										  eSearchAllPnt);
+	CTBBParallel::For(0, arrPagedLod._vecPagedLod.size(), parallelCollectPoint);
+
+	return true;
 }

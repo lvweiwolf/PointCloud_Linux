@@ -224,7 +224,7 @@ public:
 
 	static std::vector<int> Approx(const std::vector<osg::Vec3d>& cluster,
 								   const std::vector<osg::Vec3d>& points,
-								   const double& dHresholsd);
+								   const double& dHreshold);
 	/**
 	 * 点投影到地面
 	 * @param [in] pcElements 点云元素
@@ -349,6 +349,21 @@ public:
 	 */
 	typedef bool (*PostCallback)(const CString& strBodyData, CString& strResult);
 	static void StartPostApi(unsigned nPort, const CString& strApiName, PostCallback pCallbackFun);
+
+
+	/**
+	 * 搜索区域内的点
+	 * @param [in] vecPCElement
+	 * @param [in] beginPnt
+	 * @param [in] endPnt
+	 * @param [in] fRadius
+	 * @param [in] eMode
+	 * @param [in] vecResult
+	 * @return
+	 */
+	static bool SearchInRangePointCloud(const pc::data::CModelNodeVector& pcElements,
+										const pc::data::tagTravelInfo& travelInfo,
+										std::vector<pc::data::tagPointIndex>& vecResult);
 };
 
 
